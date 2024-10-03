@@ -1,16 +1,7 @@
 use bevy::prelude::*;
 use virtual_joystick::{
-    create_joystick, JoystickFloating, NoAction, VirtualJoystickEvent,
-    VirtualJoystickPlugin,
+    create_joystick, JoystickFloating, JoystickInvisible, NoAction, VirtualJoystickEvent, VirtualJoystickPlugin
 };
-
-// ID for joysticks
-#[derive(Default, Reflect, Hash, Clone, PartialEq, Eq)]
-enum JoystickControllerID {
-    #[default]
-    Joystick1,
-    Joystick2,
-}
 
 fn main() {
     App::new()
@@ -54,18 +45,18 @@ fn create_scene(mut cmd: Commands, asset_server: Res<AssetServer>) {
         asset_server.load("Outline.png"),
         None,
         None,
-        Some(Color::srgba(1.0, 0.27, 0.0, 0.3)),
+        None,
         Vec2::new(75., 75.),
         Vec2::new(150., 150.),
         Style {
-            width: Val::Px(150.),
-            height: Val::Px(150.),
+            width: Val::Percent(100.),
+            height: Val::Percent(100.),
             position_type: PositionType::Absolute,
-            left: Val::Percent(50.),
-            bottom: Val::Percent(15.),
+            left: Val::Percent(0.),
+            bottom: Val::Percent(0.),
             ..default()
         },
-        (JoystickFloating),
+        (JoystickInvisible, JoystickFloating),
         NoAction,
     );
 }
