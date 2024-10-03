@@ -19,12 +19,7 @@ use crate::{
         movement::{MovementController, ScreenWrap},
     },
     screens::Screen,
-    AppSet,
 };
-
-#[derive(Component)]
-// Player with velocity
-struct JPlayer(pub f32);
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
