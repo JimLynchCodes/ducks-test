@@ -34,13 +34,7 @@ pub(super) fn plugin(app: &mut App) {
     // Record directional input as movement controls.
     app.add_systems(Startup, create_joystick_scene);
 
-    // Record directional input as movement controls.
-    // app.add_systems(
-    //     Update,
-    //     record_player_directional_input.in_set(AppSet::RecordInput),
-    // );
-
-    // Record directional input as movement controls.
+    // Handles input from Keyboard AND Joystick as movement controls.
     app.add_systems(Update, handle_joystick_or_keyboard_input);
 }
 
