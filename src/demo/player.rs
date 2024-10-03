@@ -8,7 +8,8 @@ use bevy::{
     render::texture::{ImageLoaderSettings, ImageSampler},
 };
 use virtual_joystick::{
-    create_joystick, JoystickFloating, JoystickInvisible, NoAction, VirtualJoystickEvent, VirtualJoystickPlugin
+    create_joystick, JoystickFloating, JoystickInvisible, NoAction, VirtualJoystickEvent,
+    VirtualJoystickPlugin,
 };
 
 use crate::{
@@ -31,10 +32,7 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_plugins(VirtualJoystickPlugin::<String>::default());
     // Record directional input as movement controls.
-    app.add_systems(
-        Startup,
-        create_joystick_scene,
-    );
+    app.add_systems(Startup, create_joystick_scene);
 
     // Record directional input as movement controls.
     app.add_systems(
@@ -43,17 +41,14 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     // Record directional input as movement controls.
-    app.add_systems(
-        Update,
-        update_joystick,
-    );
+    app.add_systems(Update, update_joystick);
 }
 
 fn create_joystick_scene(mut cmd: Commands, asset_server: Res<AssetServer>) {
-    cmd.spawn(Camera2dBundle {
-        transform: Transform::from_xyz(0., 0., 5.0),
-        ..default()
-    });
+    // cmd.spawn(Camera2dBundle {
+    //     transform: Transform::from_xyz(0., 0., 5.0),
+    //     ..default()
+    // });
     // Fake Player
     cmd.spawn(SpriteBundle {
         transform: Transform {
@@ -173,44 +168,39 @@ fn record_player_directional_input(
     let intent = intent.normalize_or_zero();
 
     // Apply movement intent to controllers.
-    for mut controller in &mut controller_query {
-        controller.intent = intent;
-    }
-}
+    // for mut controller in &mut controller_query {
+    //     controller.intent = intent;
+    // }
 
+}
 
 fn update_joystick(
     mut joystick: EventReader<VirtualJoystickEvent<String>>,
     mut player: Query<(&mut Transform, &JPlayer)>,
     time_step: Res<Time>,
-    mut controller_query: Query<&mut MovementController, With<Player>>
+    mut controller_query: Query<&mut MovementController, With<Player>>,
 ) {
-    let (mut player, player_data) = player.single_mut();
+    // let (mut player, player_data) = player.single_mut();
 
     let mut intent = Vec2::ZERO;
 
     for j in joystick.read() {
         let Vec2 { x, y } = j.axis();
-        
-        // controls the ball
-        player.translation.x += x * player_data.0 * time_step.delta_seconds();
-        player.translation.y += y * player_data.0 * time_step.delta_seconds();
 
-        println!("x: {}", x);
-        println!("y: {}", y);
+        // controls the ball
+        // player.translation.x += x * player_data.0 * time_step.delta_seconds();
+        // player.translation.y += y * player_data.0 * time_step.delta_seconds();
 
         // should be controlling the duck...
         intent.x = *x;
         intent.y = *y;
-        
+
         // Apply movement intent to controllers.
         for mut controller in &mut controller_query {
             controller.intent = intent;
         }
     }
-
 }
-
 
 #[derive(Resource, Asset, Reflect, Clone)]
 pub struct PlayerAssets {
