@@ -35,36 +35,16 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, create_joystick_scene);
 
     // Record directional input as movement controls.
-    app.add_systems(
-        Update,
-        record_player_directional_input.in_set(AppSet::RecordInput),
-    );
+    // app.add_systems(
+    //     Update,
+    //     record_player_directional_input.in_set(AppSet::RecordInput),
+    // );
 
     // Record directional input as movement controls.
-    app.add_systems(Update, update_joystick);
+    app.add_systems(Update, handle_joystick_or_keyboard_input);
 }
 
 fn create_joystick_scene(mut cmd: Commands, asset_server: Res<AssetServer>) {
-    // cmd.spawn(Camera2dBundle {
-    //     transform: Transform::from_xyz(0., 0., 5.0),
-    //     ..default()
-    // });
-    // Fake Player
-    cmd.spawn(SpriteBundle {
-        transform: Transform {
-            translation: Vec3::new(0., 0., 0.),
-            ..default()
-        },
-        texture: asset_server.load("Knob.png"),
-        sprite: Sprite {
-            color: Color::srgb(0.5, 0.0, 0.5), //Purple
-            custom_size: Some(Vec2::new(50., 50.)),
-            ..default()
-        },
-        ..default()
-    })
-    .insert(JPlayer(50.));
-
     // Spawn Virtual Joystick at horizontal center using helper function
     create_joystick(
         &mut cmd,
@@ -143,8 +123,9 @@ fn spawn_player(
     ));
 }
 
-fn record_player_directional_input(
+fn handle_joystick_or_keyboard_input(
     input: Res<ButtonInput<KeyCode>>,
+    mut joystick: EventReader<VirtualJoystickEvent<String>>,
     mut controller_query: Query<&mut MovementController, With<Player>>,
 ) {
     // Collect directional input.
@@ -162,43 +143,21 @@ fn record_player_directional_input(
         intent.x += 1.0;
     }
 
-    // Normalize so that diagonal movement has the same speed as
-    // horizontal and vertical movement.
-    // This should be omitted if the input comes from an analog stick instead.
-    let intent = intent.normalize_or_zero();
-
-    // Apply movement intent to controllers.
-    // for mut controller in &mut controller_query {
-    //     controller.intent = intent;
-    // }
-
-}
-
-fn update_joystick(
-    mut joystick: EventReader<VirtualJoystickEvent<String>>,
-    mut player: Query<(&mut Transform, &JPlayer)>,
-    time_step: Res<Time>,
-    mut controller_query: Query<&mut MovementController, With<Player>>,
-) {
-    // let (mut player, player_data) = player.single_mut();
-
-    let mut intent = Vec2::ZERO;
-
     for j in joystick.read() {
         let Vec2 { x, y } = j.axis();
 
-        // controls the ball
-        // player.translation.x += x * player_data.0 * time_step.delta_seconds();
-        // player.translation.y += y * player_data.0 * time_step.delta_seconds();
-
-        // should be controlling the duck...
-        intent.x = *x;
-        intent.y = *y;
-
-        // Apply movement intent to controllers.
-        for mut controller in &mut controller_query {
-            controller.intent = intent;
+        // Joystick overrides the arrow keys! (but don't override of not touching joystick)
+        if *x != 0. || *y != 0. {
+            intent.x = *x;
+            intent.y = *y;
         }
+    }
+
+    let intent = intent.normalize_or_zero();
+
+    // Apply movement intent to controllers.
+    for mut controller in &mut controller_query {
+        controller.intent = intent;
     }
 }
 
