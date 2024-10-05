@@ -95,7 +95,7 @@ fn spawn_player(
         Player,
         SpriteBundle {
             texture: player_assets.ducky.clone(),
-            transform: Transform::from_scale(Vec2::splat(8.0).extend(1.0)),
+            transform: Transform::from_scale(Vec2::splat(4.0).extend(1.0)),
             ..Default::default()
         },
         TextureAtlas {
