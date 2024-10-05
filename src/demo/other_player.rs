@@ -1,23 +1,43 @@
-use std::sync::{Arc, Mutex};
+use std::{io::ErrorKind, net::TcpStream};
 
+// use avian3d::prelude::*; // completely unnecessary but I like physics;
 use bevy::{
-    app::{App, Startup, Update},
-    color::Color,
-    math::Vec2,
-    prelude::{Commands, Component, Query, Res, ResMut, Resource, Transform},
-    sprite::{Sprite, SpriteBundle},
-    tasks::{AsyncComputeTaskPool, IoTaskPool, Task},
+    ecs::world::CommandQueue,
+    prelude::*,
+    tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task},
 };
-use tokio_tungstenite::{connect_async, tungstenite::Message};
-use futures_util::{SinkExt, StreamExt};
-// use std::sync::mpsc::channel;
-use crossbeam_channel::{unbounded, Sender, Receiver};
+use serde::{Deserialize, Serialize};
+// use iyes_perf_ui::{entries::PerfUiBundle, PerfUiPlugin};
+use tungstenite::{connect, http::Response, stream::MaybeTlsStream, Message, WebSocket};
+
+
+// use std::sync::{Arc, Mutex};
+
+// use bevy::{
+//     app::{App, Startup, Update},
+//     color::Color,
+//     math::Vec2,
+//     prelude::{Commands, Component, Query, Res, ResMut, Resource, Transform},
+//     sprite::{Sprite, SpriteBundle},
+//     tasks::{AsyncComputeTaskPool, IoTaskPool, Task},
+// };
+// use tokio_tungstenite::{connect_async, tungstenite::Message};
+// use futures_util::{SinkExt, StreamExt};
+// // use std::sync::mpsc::channel;
+// use crossbeam_channel::{unbounded, Sender, Receiver};
 // use tokio::runtime::Runtime;
 // use tokio_tungstenite::{connect_async, tungstenite::Message};
 // // use futures_util::stream::stream::StreamExt;
 // use futures::{SinkExt, StreamExt};
 // use std::thread;
 // use tokio::sync::mpsc::{self, Receiver, Sender};
+
+#[derive(Serialize, Deserialize)]
+struct TransformData {
+    translation: Vec3,
+    rotation: Quat,
+    scale: Vec3,
+}
 
 pub(super) fn plugin(app: &mut App) {
     // app.register_type::<Player>();
@@ -33,59 +53,261 @@ pub(super) fn plugin(app: &mut App) {
     // app.insert_resource(WebSocketResource::default());
     //     url: "ws://127.0.0.1:8000".to_string(), // Example WebSocket URL
     // }); // Insert WebSocket resource
-    app.init_resource::<WebSocketState>();
+    app.add_event::<WebSocketConnectionEvents>();
+    app.add_systems(Update, check_connection_input);
+    app.add_systems(Update, setup_connection);
+    app.add_systems(Update, handle_tasks);
+    app.add_systems(Update, send_info); // System to handle WebSocket messages
+    app.add_systems(Update, recv_info); // System to handle WebSocket messages
                                                        // app.add_startup_system(start_websocket_connection.system());
-    app.add_systems(Startup, setup_websocket); // System to handle WebSocket messages
+    // app.add_systems(Startup, setup_websocket); // System to handle WebSocket messages
     // app.add_systems(Update, handle_websocket_messages); // System to handle WebSocket messages
                                                         // app.add_systems(Update, handle_received_messages); // System to handle WebSocket messages
 }
 
-#[derive(Resource)]
-struct WebSocketState {
-    sender: Option<Sender<String>>,
-    receiver: Option<Receiver<String>>,
+
+#[derive(Component)]
+struct WebSocketClient(
+    (
+        WebSocket<MaybeTlsStream<TcpStream>>,
+        Response<Option<Vec<u8>>>,
+    ),
+);
+
+#[derive(Event)]
+enum WebSocketConnectionEvents {
+    SetupConnection,
 }
 
-// #[derive(Resource)]
-struct WebSocketResource {
-    tx: Sender<String>,
-    rx: Receiver<String>,
-}
-
-impl Default for WebSocketState {
-    fn default() -> Self {
-        let (sender, receiver) = unbounded();
-        WebSocketState { sender: Some(sender), receiver: Some(receiver) }
+fn check_connection_input(
+    input: Res<ButtonInput<KeyCode>>,
+    mut ev_connect: EventWriter<WebSocketConnectionEvents>,
+) {
+    if input.just_pressed(KeyCode::Space) {
+        // set up connection
+        ev_connect.send(WebSocketConnectionEvents::SetupConnection);
     }
 }
 
-fn setup_websocket(
-    websocket_state: Res<WebSocketState>,
-    // task_pools: Res<bevy::tasks::TaskPools>,
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+enum ConnectionSetupError {
+    #[error("IO")]
+    Io(#[from] std::io::Error),
+    #[error("WebSocket")]
+    WebSocket(#[from] tungstenite::Error),
+}
+
+#[derive(Component)]
+struct WebSocketConnectionSetupTask(
+    #[allow(unused)] Task<Result<CommandQueue, ConnectionSetupError>>,
+);
+
+// mod util;
+
+// fn setup_connection(
+//     mut ev_connect: EventReader<WebSocketConnectionEvents>,
+//     mut commands: Commands,
+// ) {
+//     for ev in ev_connect.read() {
+//         match ev {
+//             WebSocketConnectionEvents::SetupConnection => {
+//                 info!("Setting up connection!");
+//                 let pool = AsyncComputeTaskPool::get();
+//                 let entity = commands.spawn_empty().id();
+//                 let task = pool.spawn(async move {
+//                     let mut client = connect("ws://127.0.01:8000")?;
+//                     match client.0.get_mut() {
+//                         MaybeTlsStream::Plain(p) => p.set_nonblocking(true)?,
+//                         MaybeTlsStream::Rustls(stream_owned) => {
+//                             stream_owned.get_mut().set_nonblocking(true)?
+//                         }
+//                         _ => todo!(),
+//                     };
+//                     info!("Connected successfully!");
+//                     let mut command_queue = CommandQueue::default();
+
+//                     command_queue.push(move |world: &mut World| {
+//                         world
+//                             .entity_mut(entity)
+//                             .insert(WebSocketClient(client))
+//                             // Task is complete, so remove task component from entity
+//                             .remove::<WebSocketConnectionSetupTask>();
+//                     });
+
+//                     Ok(command_queue)
+//                 });
+//                 commands
+//                     .entity(entity)
+//                     .insert(WebSocketConnectionSetupTask(task));
+//             }
+//         }
+//     }
+// }
+
+fn setup_connection(
+    mut ev_connect: EventReader<WebSocketConnectionEvents>,
+    mut commands: Commands,
 ) {
-    let sender = websocket_state.sender.clone();
+    for ev in ev_connect.read() {
+        match ev {
+            WebSocketConnectionEvents::SetupConnection => {
+                info!("Setting up connection!");
+                let pool = AsyncComputeTaskPool::get();
+                let entity = commands.spawn_empty().id();
+                let task = pool.spawn(async move {
+                    let mut client = connect("ws://127.0.0.1:8000/ws")?;
+                    match client.0.get_mut() {
+                        MaybeTlsStream::Plain(p) => p.set_nonblocking(true)?,
+                        MaybeTlsStream::Rustls(stream_owned) => {
+                            stream_owned.get_mut().set_nonblocking(true)?
+                        }
+                        _ => todo!(),
+                    };
+                    info!("Connected successfully!");
+                    let mut command_queue = CommandQueue::default();
 
-    let task = async move {
-        let url = "ws://localhost:8080";
-        let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
-        let (mut write, mut read) = ws_stream.split();
+                    command_queue.push(move |world: &mut World| {
+                        world
+                            .entity_mut(entity)
+                            .insert(WebSocketClient(client))
+                            // Task is complete, so remove task component from entity
+                            .remove::<WebSocketConnectionSetupTask>();
+                    });
 
-        loop {
-            tokio::select! {
-                msg = read.next() => {
-                    if let Some(Ok(msg)) = msg {
-                        println!("Received: {}", msg);
-                        // You might want to send this message back to the game logic
-                        // sender.send(msg.to_string()).unwrap();
-                    }
-                }
-                // You can add more async operations here if needed
+                    Ok(command_queue)
+                });
+                commands
+                    .entity(entity)
+                    .insert(WebSocketConnectionSetupTask(task));
             }
         }
-    };
-
-    // task_pool.spawn(task).detach();
+    }
 }
+
+/// This system queries for entities that have our Task<Transform> component. It polls the
+/// tasks to see if they're complete. If the task is complete it takes the result, adds a
+/// new [`Mesh3d`] and [`MeshMaterial3d`] to the entity using the result from the task's work, and
+/// removes the task component from the entity.
+fn handle_tasks(
+    mut commands: Commands,
+    mut transform_tasks: Query<&mut WebSocketConnectionSetupTask>,
+) {
+    for mut task in &mut transform_tasks {
+        if let Some(result) = block_on(future::poll_once(&mut task.0)) {
+            // append the returned command queue to have it execute later
+            match result {
+                Ok(mut commands_queue) => {
+                    commands.append(&mut commands_queue);
+                }
+                Err(e) => {
+                    info!("Connection failed with: {e:?}");
+                }
+            }
+        }
+    }
+}
+
+// fn send_info(
+//     some_data: Query<(&Transform,)>,
+//     mut entities_with_client: Query<(&mut WebSocketClient,)>,
+// ) {
+//     for (mut client,) in entities_with_client.iter_mut() {
+//         let transforms = &some_data.iter().map(|x| x.0.clone()).collect::<Vec<_>>();
+//         info!("Sending data: {transforms:?}");
+//         match client
+//             .0
+//              .0
+//             // .send(Message::Binary(bincode::serialize(transforms).unwrap()))
+//         {
+//             Ok(_) => info!("Data successfully sent!"),
+//             Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */ }
+//             Err(e) => {
+//                 warn!("Could not send the message: {e:?}");
+//             }
+//         }
+//     }
+// }
+
+// Almost!
+fn send_info(
+    some_data: Query<(&Transform,)>,
+    mut entities_with_client: Query<(&mut WebSocketClient,)>,
+) {
+    for (mut client,) in entities_with_client.iter_mut() {
+        let transforms = &some_data.iter().map(|x| x.0.clone()).collect::<Vec<_>>();
+        info!("Sending data: {transforms:?}");
+        // match client
+            // .0
+            //  .0
+            // .send(Message::Binary(bincode::serialize(transforms).unwrap()))
+        // {
+        //     Ok(_) => info!("Data successfully sent!"),
+        //     Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */ }
+        //     Err(e) => {
+        //         warn!("Could not send the message: {e:?}");
+        //     }
+        // }
+    }
+}
+
+fn recv_info(mut q: Query<(&mut WebSocketClient,)>) {
+    for (mut client,) in q.iter_mut() {
+        match client.0 .0.read() {
+            Ok(m) => info!("Received message {m:?}"),
+            Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */ }
+            Err(e) => warn!("error receiving: {e}"),
+        }
+    }
+}
+
+// #[derive(Resource)]
+// struct WebSocketState {
+//     sender: Option<Sender<String>>,
+//     receiver: Option<Receiver<String>>,
+// }
+
+// // #[derive(Resource)]
+// struct WebSocketResource {
+//     tx: Sender<String>,
+//     rx: Receiver<String>,
+// }
+
+// impl Default for WebSocketState {
+//     fn default() -> Self {
+//         let (sender, receiver) = unbounded();
+//         WebSocketState { sender: Some(sender), receiver: Some(receiver) }
+//     }
+// }
+
+// fn setup_websocket(
+//     websocket_state: Res<WebSocketState>,
+//     // task_pools: Res<bevy::tasks::TaskPools>,
+// ) {
+//     let sender = websocket_state.sender.clone();
+
+//     let task = async move {
+//         let url = "ws://localhost:8080";
+//         let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
+//         let (mut write, mut read) = ws_stream.split();
+
+//         loop {
+//             tokio::select! {
+//                 msg = read.next() => {
+//                     if let Some(Ok(msg)) = msg {
+//                         println!("Received: {}", msg);
+//                         // You might want to send this message back to the game logic
+//                         // sender.send(msg.to_string()).unwrap();
+//                     }
+//                 }
+//                 // You can add more async operations here if needed
+//             }
+//         }
+//     };
+
+//     // task_pool.spawn(task).detach();
+// }
 
 // fn handle_websocket_messages(websocket_state: Res<WebSocketState>) {
 //     if let Ok(message) = websocket_state.receiver.try_recv() {
@@ -201,17 +423,17 @@ fn handle_received_messages() {
 // }
 
 // Component to store the player's name
-#[derive(Component)]
-struct OtherPlayerName(String);
+// #[derive(Component)]
+// struct OtherPlayerName(String);
 
-// Component to link the text entity to the player
-#[derive(Component)]
-struct OtherPlayerNameText;
+// // Component to link the text entity to the player
+// #[derive(Component)]
+// struct OtherPlayerNameText;
 
-// Task to handle WebSocket connection asynchronously
-// #[derive(Default)]
-#[derive(Resource)]
-struct WebSocketTask(Task<()>);
+// // Task to handle WebSocket connection asynchronously
+// // #[derive(Default)]
+// #[derive(Resource)]
+// struct WebSocketTask(Task<()>);
 
 // Startup system to initiate WebSocket connection
 // fn start_websocket_connection2(

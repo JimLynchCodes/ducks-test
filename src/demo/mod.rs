@@ -17,5 +17,6 @@ pub(super) fn plugin(app: &mut App) {
         movement::plugin,
         player::plugin,
         level::plugin,
+        other_player::plugin
     ));
 }
