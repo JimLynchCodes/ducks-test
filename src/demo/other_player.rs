@@ -79,6 +79,17 @@ enum WebSocketConnectionEvents {
     SetupConnection,
 }
 
+#[derive(Debug, serde::Serialize)]
+struct FooData {
+    friendly_name: String,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct Foo {
+    action_type: String,
+    data: FooData
+}
+
 fn check_connection_input(
     input: Res<ButtonInput<KeyCode>>,
     mut ev_connect: EventWriter<WebSocketConnectionEvents>,
@@ -230,14 +241,13 @@ fn handle_tasks(
 //     }
 // }
 
-// Almost!
 fn send_info(
-    some_data: Query<(&Transform,)>,
+    // some_data: Query<(&Transform,)>,
     mut entities_with_client: Query<(&mut WebSocketClient,)>,
 ) {
     for (mut client,) in entities_with_client.iter_mut() {
-        let transforms = &some_data.iter().map(|x| x.0.clone()).collect::<Vec<_>>();
-        info!("Sending data: {transforms:?}");
+        // let transforms = &some_data.iter().map(|x| x.0.clone()).collect::<Vec<_>>();
+        // info!("Sending data: {transforms:?}");
         // match client
             // .0
             //  .0
@@ -251,15 +261,135 @@ fn send_info(
         // }
     }
 }
+// Almost!
+// fn send_info(
+//     // some_data: Query<(&Transform,)>,
+//     mut entities_with_client: Query<(&mut WebSocketClient,)>,
+// ) {
+//     for (mut client,) in entities_with_client.iter_mut() {
+//         // let transforms = &some_data.iter().map(|x| x.0.clone()).collect::<Vec<_>>();
+//         // info!("Sending data: {transforms:?}");
+        
+//         info!("Sending data...");
+
+//         let foo = Foo {
+//             action_type: "something".to_string(),
+//             data: FooData {
+//                 friendly_name: "bob".to_string()
+//             }
+//         };
+    
+//         let message_string =
+//             serde_json::ser::to_string(&foo).unwrap_or_else(|op| {
+//                 println!("Couldn't convert You Quacked struct to string");
+//                 "".to_string()
+//             });
+
+//         match client
+//             .0
+//             .0
+//             .send(Message::text(message_string))
+//         {
+//             Ok(_) => info!("Data successfully sent!"),
+//             Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */ }
+//             Err(e) => {
+//                 warn!("Could not send the message: {e:?}");
+//             }
+//         };
+//     }
+// }
+
+// fn send_info2(
+//     // some_data: Query<(&Transform,)>,
+//     // mut entities_with_client: Query<(&mut WebSocketClient,)>,
+// ) {
+//     for (mut client,) in entities_with_client.iter_mut() {
+//         // let transforms = &some_data.iter().map(|x| x.0.clone()).collect::<Vec<_>>();
+//         // info!("Sending data: {transforms:?}");
+        
+//         info!("Sending data...");
+
+//         match client
+//             .0
+//             .0
+//             .send(Message::text(build__msg()))
+//         {
+//             Ok(_) => info!("Data successfully sent!"),
+//             Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */ }
+//             Err(e) => {
+//                 warn!("Could not send the message: {e:?}");
+//             }
+//         }
+//     }
+// }
+
+// fn reply(ws: WebSocketClient) {
+
+// }
 
 fn recv_info(mut q: Query<(&mut WebSocketClient,)>) {
     for (mut client,) in q.iter_mut() {
         match client.0 .0.read() {
-            Ok(m) => info!("Received message {m:?}"),
+
+            Ok(m) =>  {
+                info!("Received message {m:?}");
+                // send_info(q);
+                
+            },
             Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */ }
             Err(e) => warn!("error receiving: {e}"),
         }
     }
+}
+
+async fn build__msg(
+    // quacker_client_id: &str,
+    // quackerClient: &ClientConnection,
+    // quackerClientsGameData: &ClientsGameData,
+) -> String {
+    // let default_game_data = ClientGameData {
+    //     client_id: "error".to_string(),
+    //     x_pos: 0,
+    //     y_pos: 0,
+    //     radius: 0,
+    //     friendly_name: "error".to_string(),
+    //     color: "error".to_string(),
+    //     quack_pitch: 0.,
+    //     cracker_count: 0,
+    // };
+
+    // let gaurd = quackerClientsGameData.lock().await;
+
+    // let sender_game_data = gaurd.get(quacker_client_id).unwrap_or_else(|| {
+    //     println!("Couldn't find client with id: {}", quacker_client_id);
+    //     &default_game_data
+    // });
+
+    // let quack_message_struct = YouQuackedMsg {
+    //     action_type: OutgoingGameActionType::OtherPlayerQuacked,
+    //     data: QuackResponseData {
+    //         player_uuid: sender_game_data.client_id.to_string(),
+    //         player_friendly_name: sender_game_data.friendly_name.clone(),
+    //         player_x_position: sender_game_data.x_pos,
+    //         player_y_position: sender_game_data.y_pos,
+    //         quack_pitch: sender_game_data.quack_pitch,
+    //     },
+    // };
+
+    let foo = Foo {
+        action_type: "something".to_string(),
+        data: FooData {
+            friendly_name: "bob".to_string()
+        }
+    };
+
+    let message_string =
+        serde_json::ser::to_string(&foo).unwrap_or_else(|op| {
+            println!("Couldn't convert You Quacked struct to string");
+            "".to_string()
+        });
+
+    message_string
 }
 
 // #[derive(Resource)]
