@@ -16,7 +16,7 @@ use crate::{
     asset_tracking::LoadResource,
     demo::{
         animation::PlayerAnimation,
-        movement::{MovementController, ScreenWrap},
+        movement::{MovementController},
     },
     screens::Screen,
 };
@@ -95,7 +95,7 @@ fn spawn_player(
         Player,
         SpriteBundle {
             texture: player_assets.ducky.clone(),
-            transform: Transform::from_scale(Vec2::splat(4.0).extend(1.0)),
+            transform: Transform::from_scale(Vec2::splat(4.0).extend(2.0)),
             ..Default::default()
         },
         TextureAtlas {
@@ -106,7 +106,6 @@ fn spawn_player(
             max_speed: config.max_speed,
             ..default()
         },
-        ScreenWrap,
         player_animation,
         StateScoped(Screen::Gameplay),
     ));

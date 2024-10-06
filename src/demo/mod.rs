@@ -10,9 +10,11 @@ pub mod level;
 mod movement;
 pub mod player;
 pub mod other_player;
+pub mod background;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
+        background::plugin,
         animation::plugin,
         movement::plugin,
         player::plugin,

@@ -16,5 +16,6 @@ pub(super) fn plugin(_app: &mut App) {
 pub fn spawn_level(world: &mut World) {
     // The only thing we have in our level is a player,
     // but add things like walls etc. here.
+    
     SpawnPlayer { max_speed: 400.0 }.apply(world);
 }
