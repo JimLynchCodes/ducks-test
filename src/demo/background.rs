@@ -2,24 +2,7 @@
 //! Note that this is separate from the `movement` module as that could be used
 //! for other characters as well.
 
-use bevy::{
-    ecs::{system::RunSystemOnce as _, world::Command},
-    prelude::*,
-    render::texture::{ImageLoaderSettings, ImageSampler},
-};
-use virtual_joystick::{
-    create_joystick, JoystickFloating, JoystickInvisible, NoAction, VirtualJoystickEvent,
-    VirtualJoystickPlugin,
-};
-
-use crate::{
-    asset_tracking::LoadResource,
-    demo::{
-        animation::PlayerAnimation,
-        movement::{MovementController},
-    },
-    screens::Screen,
-};
+use bevy::prelude::*;
 
 // #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 // #[reflect(Component)]
@@ -57,7 +40,7 @@ fn create_background(
     commands.spawn(SpriteBundle {
         texture: texture_handle,
         transform: Transform {
-            scale: Vec3::new(5.0,5.0, 0.0), // Adjust scale if necessary
+            scale: Vec3::new(5.0, 5.0, 0.0), // Adjust scale if necessary
             ..Default::default()
         },
         ..Default::default()

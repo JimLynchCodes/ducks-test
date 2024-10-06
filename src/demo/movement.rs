@@ -13,19 +13,14 @@
 //! purposes. If you want to move the player in a smoother way,
 //! consider using a [fixed timestep](https://github.com/bevyengine/bevy/blob/main/examples/movement/physics_in_fixed_timestep.rs).
 
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::prelude::*;
 
 use crate::AppSet;
 
 pub(super) fn plugin(app: &mut App) {
-    app.register_type::<(MovementController)>();
+    app.register_type::<MovementController>();
 
-    app.add_systems(
-        Update,
-        (apply_movement)
-            .chain()
-            .in_set(AppSet::Update),
-    );
+    app.add_systems(Update, apply_movement.chain().in_set(AppSet::Update));
 }
 
 /// These are the movement parameters for our character controller.
@@ -62,18 +57,18 @@ fn apply_movement(
         Query<&mut Transform, With<Camera>>,
     )>,
 ) {
-
-    let mut translation = Vec3 { x: 0., y: 0., z: 0. };
+    let mut translation = Vec3 {
+        x: 0.,
+        y: 0.,
+        z: 0.,
+    };
 
     for (controller, mut transform) in &mut param_set.p0().iter_mut() {
         let velocity = controller.max_speed * controller.intent;
         transform.translation += velocity.extend(0.0) * time.delta_seconds();
         translation = velocity.extend(0.0) * time.delta_seconds();
-        
     }
     for mut camera in &mut param_set.p1().iter_mut() {
         camera.translation += translation;
     }
-
 }
-
