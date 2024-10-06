@@ -40,7 +40,8 @@ fn create_background(
     commands.spawn(SpriteBundle {
         texture: texture_handle,
         transform: Transform {
-            scale: Vec3::new(5.0, 5.0, 0.0), // Adjust scale if necessary
+            scale: Vec3::new(5.0, 5.0, 0.0), // Adjust scale if necessary,
+            translation: Vec3::new(0.0, 0.0, 1.0),
             ..Default::default()
         },
         ..Default::default()

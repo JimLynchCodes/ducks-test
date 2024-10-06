@@ -14,6 +14,9 @@ pub trait Widgets {
 
     /// Spawn a simple text label.
     fn label(&mut self, text: impl Into<String>) -> EntityCommands;
+
+    // Spawn a text input.
+    // fn text_input(&mut self, text: impl Into<String>) -> EntityCommands;
 }
 
 impl<T: Spawn> Widgets for T {
@@ -103,6 +106,25 @@ impl<T: Spawn> Widgets for T {
         ));
         entity
     }
+
+    // fn text_input(&mut self, text: impl Into<String>) -> EntityCommands {
+    //     let entity = self.spawn(TextInputBundle::default());
+    //         // Name::new("Label"),
+    //         // TextBundle::from_section(
+    //         //     text,
+    //         //     TextStyle {
+    //         //         font_size: 24.0,
+    //         //         color: LABEL_TEXT,
+    //         //         ..default()
+    //         //     },
+    //         // )
+    //         // .with_style(Style {
+    //         //     width: Px(500.0),
+    //         //     ..default()
+    //         // }),
+    //     // ));
+    //     entity
+    // }
 }
 
 /// An extension trait for spawning UI containers.
