@@ -23,6 +23,7 @@ pub(super) fn plugin(app: &mut App) {
 
 fn spawn_level(mut commands: Commands,  mut join_request_event_writer: EventWriter<JoinRequestEvent>) {
     commands.add(spawn_level_command);
+    println!("sending joiner request event");
     join_request_event_writer.send(JoinRequestEvent("hello".to_string()));
 }
 
