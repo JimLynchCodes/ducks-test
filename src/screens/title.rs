@@ -25,6 +25,7 @@ fn spawn_title_screen(mut commands: Commands) {
 }
 
 fn enter_gameplay_screen(_trigger: Trigger<OnPress>, mut next_screen: ResMut<NextState<Screen>>) {
+    
     next_screen.set(Screen::Gameplay);
 }
 

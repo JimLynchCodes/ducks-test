@@ -3,7 +3,7 @@
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 
 use crate::{
-    asset_tracking::LoadResource, audio::Music, demo::level::spawn_level as spawn_level_command,
+    asset_tracking::LoadResource, audio::Music, demo::{level::spawn_level as spawn_level_command, other_player::JoinRequestEvent},
     screens::Screen,
 };
 
@@ -21,8 +21,9 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-fn spawn_level(mut commands: Commands) {
+fn spawn_level(mut commands: Commands,  mut join_request_event_writer: EventWriter<JoinRequestEvent>) {
     commands.add(spawn_level_command);
+    join_request_event_writer.send(JoinRequestEvent("hello".to_string()));
 }
 
 #[derive(Resource, Asset, Reflect, Clone)]

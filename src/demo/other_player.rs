@@ -8,7 +8,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 // use iyes_perf_ui::{entries::PerfUiBundle, PerfUiPlugin};
-use tungstenite::{connect, http::Response, stream::MaybeTlsStream, WebSocket};
+use tungstenite::{connect, http::Response, stream::MaybeTlsStream, Message, WebSocket};
 
 // use std::sync::{Arc, Mutex};
 
@@ -53,11 +53,13 @@ pub(super) fn plugin(app: &mut App) {
     //     url: "ws://127.0.0.1:8000".to_string(), // Example WebSocket URL
     // }); // Insert WebSocket resource
     app.add_event::<WebSocketConnectionEvents>();
+    app.add_event::<JoinRequestEvent>();
     app.add_systems(Update, check_connection_input);
     app.add_systems(Update, setup_connection);
     app.add_systems(Update, handle_tasks);
     app.add_systems(Update, send_info); // System to handle WebSocket messages
     app.add_systems(Update, recv_info); // System to handle WebSocket messages
+    app.add_systems(Update, listen_for_bevy_events_for_ws_messages);
                                         // app.add_startup_system(start_websocket_connection.system());
                                         // app.add_systems(Startup, setup_websocket); // System to handle WebSocket messages
                                         // app.add_systems(Update, handle_websocket_messages); // System to handle WebSocket messages
@@ -176,29 +178,86 @@ fn handle_tasks(
     }
 }
 
+#[derive(Event)]
+pub struct JoinRequestEvent(pub String);
 
-fn send_info(
-    // some_data: Query<(&Transform,)>,
+fn listen_for_bevy_events_for_ws_messages(
+    mut ev_join_request: EventReader<JoinRequestEvent>,
+    mut entities_with_client: Query<(&mut WebSocketClient,)>,
+) {
+    
+    for ev in ev_join_request.read() {
+        println!("heard join request event");
+        for mut client in entities_with_client.iter_mut() {
+            // if let Some(socket) = &mut client.0 {
+            // Prepare the message to send
+            // let message = format!("JOIN:{}", ev.room_id);
+
+            // for (mut client,) in client.iter_mut() {
+            let message = build_join_request_msg(ev.0.clone());
+            // let transforms = &some_data.iter().map(|x| x.0.clone()).collect::<Vec<_>>();
+            // info!("Sending data: {transforms:?}");
+            match client.0 .0 .0.send(Message::text(message)) {
+                Ok(_) => info!("Data successfully sent!"),
+                Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */
+                }
+                Err(e) => {
+                    warn!("Could not send the message: {e:?}");
+                }
+            }
+            // }
+
+            // let a = client.0.0.;
+
+            // client.0.as_mut().
+            // Send the message
+            // if let Err(err) = client.0
+            // .socket.write_message(Message::Text(message)) {
+            // error!("Failed to send join request: {:?}", err);
+            // }
+        }
+    }
+}
+// for ev in ev_join_request.read() {
+//     eprintln!(
+//         "Heard event for Entity {:?} joined with friendly name: {:?}",
+//         ev.0, ev.1
+//     );
+
+//     for mut client in entities_with_client.iter_mut() {
+//         let join_msg_string = build_join_request_msg(ev.1);
+
+//         let websocket = &mut client.socket;
+
+//         match client.socket.write_message(join_msg_string) {
+//             Ok(_) => println!("Message sent to WebSocket server: {}", join_event.message),
+//             Err(e) => eprintln!("Failed to send message: {}", e),
+//         }
+//     }
+// }
+// }
+
+fn send_info(// some_data: Query<(&Transform,)>,
     // mut entities_with_client: Query<(&mut WebSocketClient,)>,
 ) {
     // for (mut client,) in entities_with_client.iter_mut() {
-        // let transforms = &some_data.iter().map(|x| x.0.clone()).collect::<Vec<_>>();
-        // info!("Sending data: {transforms:?}");
-        // match client
-        // .0
-        //  .0
-        // .send(Message::Binary(bincode::serialize(transforms).unwrap()))
-        // {
-        //     Ok(_) => info!("Data successfully sent!"),
-        //     Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */ }
-        //     Err(e) => {
-        //         warn!("Could not send the message: {e:?}");
-        //     }
-        // }
+    // let transforms = &some_data.iter().map(|x| x.0.clone()).collect::<Vec<_>>();
+    // info!("Sending data: {transforms:?}");
+    // match client
+    // .0
+    //  .0
+    // .send(Message::Binary(bincode::serialize(transforms).unwrap()))
+    // {
+    //     Ok(_) => info!("Data successfully sent!"),
+    //     Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */ }
+    //     Err(e) => {
+    //         warn!("Could not send the message: {e:?}");
+    //     }
+    // }
     // }
 }
 
-fn recv_info(mut q: Query<(&mut WebSocketClient,)>) {
+fn recv_info(mut q: Query<(&mut WebSocketClient,)>, mut commands: Commands) {
     for (mut client,) in q.iter_mut() {
         match client.0 .0.read() {
             Ok(m) => {
@@ -255,4 +314,61 @@ async fn _build_msg(// quacker_client_id: &str,
         println!("Couldn't convert You Quacked struct to string");
         "".to_string()
     })
+}
+
+#[derive(serde::Serialize)]
+struct JoinRequestData {
+    friendly_name: String,
+}
+
+#[derive(serde::Serialize)]
+struct JoinRequest {
+    action_type: String,
+    data: JoinRequestData,
+}
+
+fn build_join_request_msg(
+    // quacker_client_id: &str,
+
+    // quackerClient: ,
+    friendly_name: String,
+    // quackerClientsGameData: &ClientsGameData,
+) -> String {
+    let join_request_hardcoded = JoinRequest {
+        action_type: "join".to_string(),
+        data: JoinRequestData {
+            friendly_name: friendly_name,
+        },
+    };
+
+    // let gaurd = quackerClientsGameData.lock().await;
+
+    // let sender_game_data = gaurd.get(quacker_client_id).unwrap_or_else(|| {
+    //     println!("Couldn't find client with id: {}", quacker_client_id);
+    //     &default_game_data
+    // });
+
+    // let quack_message_struct = YouQuackedMsg {
+    //     action_type: OutgoingGameActionType::OtherPlayerQuacked,
+    //     data: QuackResponseData {
+    //         player_uuid: sender_game_data.client_id.to_string(),
+    //         player_friendly_name: sender_game_data.friendly_name.clone(),
+    //         player_x_position: sender_game_data.x_pos,
+    //         player_y_position: sender_game_data.y_pos,
+    //         quack_pitch: sender_game_data.quack_pitch,
+    //     },
+    // };
+
+    // let foobar = _Foo {
+    //     action_type: "something".to_string(),
+    //     data: _FooData {
+    //         friendly_name: "bob".to_string(),
+    //     },
+    // };
+
+    let g = serde_json::ser::to_string(&join_request_hardcoded).unwrap_or_else(|_op| {
+        println!("Couldn't convert You Quacked struct to string");
+        "".to_string()
+    });
+    g
 }
