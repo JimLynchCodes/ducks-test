@@ -11,6 +11,8 @@ mod movement;
 pub mod player;
 pub mod other_player;
 pub mod background;
+pub mod websocket_connect;
+pub mod websocket_join_msg;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
@@ -19,6 +21,8 @@ pub(super) fn plugin(app: &mut App) {
         movement::plugin,
         player::plugin,
         level::plugin,
-        other_player::plugin
+        other_player::plugin,
+        websocket_connect::plugin,
+        websocket_join_msg::plugin,
     ));
 }
