@@ -6,7 +6,10 @@ use bevy::{
     tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task},
 };
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tungstenite::{connect, http::Response, stream::MaybeTlsStream, Message, WebSocket};
+
+use strum_macros::EnumString;
 
 // #[derive(Serialize, Deserialize)]
 // struct TransformData {
@@ -15,21 +18,76 @@ use tungstenite::{connect, http::Response, stream::MaybeTlsStream, Message, WebS
 //     scale: Vec3,
 // }
 
+// Client to Server types
+#[derive(Debug, PartialEq, EnumString, Serialize)]
+pub enum C2SActionTypes {
+    #[strum(serialize = "join", serialize = "j")]
+    Join,
+
+    #[strum(serialize = "quack", serialize = "q")]
+    Quack,
+
+    #[strum(serialize = "move", serialize = "m")]
+    Move,
+
+    #[strum(serialize = "interact", serialize = "i")]
+    Interact,
+
+    #[strum(serialize = "empty", serialize = "e")]
+    Empty, // used as a default in order to ignore invalid inputs without panicing
+}
+
+// Server to Client actions
+#[derive(Debug, PartialEq, EnumString, Serialize, Clone, Deserialize)]
+pub enum S2CActionTypes {
+    #[strum(serialize = "you_joined", serialize = "yj")]
+    YouJoined,
+    #[strum(serialize = "other_player_joined", serialize = "opj")]
+    OtherPlayerJoined,
+
+    #[strum(serialize = "you_quacked", serialize = "yq")]
+    YouQuacked,
+    #[strum(serialize = "other_player_quacked", serialize = "opq")]
+    OtherPlayerQuacked,
+
+    #[strum(serialize = "you_moved", serialize = "ym")]
+    YouMoved,
+    #[strum(serialize = "other_player_moved", serialize = "opm")]
+    OtherPlayerMoved,
+
+    #[strum(serialize = "you_got_crackers", serialize = "ygc")]
+    YouGotCrackers,
+    #[strum(serialize = "other_player_got_crackers", serialize = "opgc")]
+    OtherPlayerGotCrackers,
+
+    #[strum(serialize = "you_died", serialize = "yd")]
+    YouGotDied,
+    #[strum(serialize = "other_player_died", serialize = "opd")]
+    OtherPlayerGotDied,
+
+    #[strum(serialize = "empty", serialize = "e")]
+    Empty,
+}
+
 pub(super) fn plugin(app: &mut App) {
-  
     app.add_event::<WebSocketConnectionEvents>();
+    app.add_event::<YouJoinedWsReceived>();
     // app.add_event::<JoinRequestEvent>();
     app.add_systems(Startup, actually_connect);
     app.add_systems(Update, setup_connection);
     app.add_systems(Update, handle_tasks);
-    // app.add_systems(Update, send_info); // System to handle WebSocket messages
     app.add_systems(Update, recv_ws_msg); // System to handle WebSocket messages
-    // app.add_systems(Update, listen_for_bevy_events_for_ws_messages);
+    
+    // app.add_systems(Update, recv_ws_msg.before(setup_connection).before(handle_tasks));
+    // .before((handle_tasks));
+    
 }
+// app.add_systems(Update, send_info); // System to handle WebSocket messages
+// app.add_systems(Update, listen_for_bevy_events_for_ws_messages);
 
 #[derive(Component)]
 pub struct WebSocketClient(
-    pub (
+    pub  (
         WebSocket<MaybeTlsStream<TcpStream>>,
         Response<Option<Vec<u8>>>,
     ),
@@ -40,17 +98,40 @@ enum WebSocketConnectionEvents {
     SetupConnection,
 }
 
+#[derive(Event, Debug, Clone)]
+pub struct YouJoinedWsReceived {
+    pub data: Value,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct GenericIncomingRequest {
+    pub action_type: S2CActionTypes,
+    pub data: Value,
+}
+
 fn actually_connect(
     input: Res<ButtonInput<KeyCode>>,
     mut ev_connect: EventWriter<WebSocketConnectionEvents>,
 ) {
     // if input.just_pressed(KeyCode::Space) {
-        // set up connection
-        ev_connect.send(WebSocketConnectionEvents::SetupConnection);
+    // set up connection
+    ev_connect.send(WebSocketConnectionEvents::SetupConnection);
     // }
 }
 
+// fn actually_connect(
+//     input: Res<ButtonInput<KeyCode>>,
+//     mut ev_connect: EventWriter<WebSocketConnectionEvents>,
+// ) {
+//     // if input.just_pressed(KeyCode::Space) {
+//         // set up connection
+//         ev_connect.send(WebSocketConnectionEvents::SetupConnection);
+//     // }
+// }
+
 use thiserror::Error;
+
+use super::websocket_join_msg::JoinRequestEvent;
 
 #[derive(Error, Debug)]
 enum ConnectionSetupError {
@@ -154,13 +235,64 @@ fn handle_tasks(
 //     }
 // }
 
-
-fn recv_ws_msg(mut q: Query<(&mut WebSocketClient,)>, mut commands: Commands) {
+fn recv_ws_msg(
+    mut q: Query<(&mut WebSocketClient,)>,
+    mut commands: Commands,
+    mut bevy_event_writer: EventWriter<YouJoinedWsReceived>,
+) {
     for (mut client,) in q.iter_mut() {
         match client.0 .0.read() {
             Ok(m) => {
                 info!("Received message ws connect {m:?}");
                 // send_info(q);
+
+                let generic_msg =
+                    serde_json::from_str(&m.to_text().unwrap()).unwrap_or_else(|op| {
+                        info!("Failed to parse incoming websocket message: {}", op);
+                        GenericIncomingRequest {
+                            action_type: S2CActionTypes::Empty,
+                            data: Value::Null,
+                        }
+                    });
+
+                match generic_msg.action_type {
+                    S2CActionTypes::YouJoined => {
+                        info!("Received 'YouJoined' message from ws server!");
+                        bevy_event_writer.send(YouJoinedWsReceived{ data: generic_msg.data });
+                    }
+                    S2CActionTypes::OtherPlayerJoined => {
+                        info!("Received 'OtherPlayerJoined' message from ws server!");
+                    }
+                    S2CActionTypes::YouQuacked => {
+                        info!("Received 'YouQuacked' message from ws server!");
+                    }
+                    S2CActionTypes::OtherPlayerQuacked => {
+                        info!("Received 'OtherPlayerQuacked' message from ws server!");
+                    }
+                    S2CActionTypes::YouMoved => {
+                        info!("Received 'YouMoved' message from ws server!");
+                    }
+                    S2CActionTypes::OtherPlayerMoved => {
+                        info!("Received 'OtherPlayerMoved' message from ws server!");
+                    }
+                    S2CActionTypes::YouGotCrackers => {
+                        info!("Received 'YouGotCrackers' message from ws server!");
+                    }
+                    S2CActionTypes::OtherPlayerGotCrackers => {
+                        info!("Received 'OtherPlayerGotCrackers' message from ws server!");
+                    }
+                    S2CActionTypes::YouGotDied => {
+                        info!("Received 'YouGotDied' message from ws server!");
+                    }
+                    S2CActionTypes::OtherPlayerGotDied => {
+                        info!("Received 'OtherPlayerGotDied' message from ws server!");
+                    }
+                    S2CActionTypes::Empty => {
+                        info!("Received 'Empty' message from ws server!");
+                    }
+                }
+
+                // let generic_msg = serde_json::from_value(m);
             }
             Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */ }
             Err(e) => warn!("error receiving: {e}"),

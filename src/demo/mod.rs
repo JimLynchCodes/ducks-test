@@ -17,10 +17,10 @@ pub mod websocket_move_msg;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
+        player::plugin,
         background::plugin,
         animation::plugin,
         movement::plugin,
-        player::plugin,
         level::plugin,
         other_player::plugin,
         websocket_connect::plugin,
