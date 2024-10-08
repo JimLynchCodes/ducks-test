@@ -14,6 +14,11 @@ use crate::{
 
 use super::websocket_connect::YouJoinedWsReceived;
 
+#[derive(Resource)]
+struct QuackAudio {
+    sound_handle: Handle<AudioSource>, // Handle for the loaded sound
+}
+
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
     app.load_resource::<PlayerAssets>();
@@ -22,6 +27,52 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Startup, create_joystick_scene);
     app.add_systems(Update, handle_joystick_or_keyboard_input);
     app.add_systems(Update, you_joined_ws_msg_handler);
+    app.add_systems(Startup, quack_sound_setup);
+    app.add_systems(Update, spacebar_quack_system);
+}
+
+fn quack_sound_setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut audio: ResMut<Assets<AudioSource>>,
+) {
+    let sound_handle = asset_server.load("audio/sound_effects/duck-quack.ogg"); // Adjust the path as necessary
+
+    // Store the handle in a resource
+    commands.insert_resource(QuackAudio { sound_handle });
+}
+
+fn spacebar_quack_system(
+    mut commands: Commands,
+    audio: Res<QuackAudio>,
+    keyboard_input: Res<ButtonInput<KeyCode>>, // Input resource for key events
+    mut query: Query<&mut Transform>,     
+    audio_assets: Res<Assets<AudioSource>>     // Query to find entities to affect
+) {
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        // Check if space was just pressed
+        println!("Space pressed 1! Playing sound.");
+
+        if let Some(_) = audio_assets.get(&audio.sound_handle) {
+            // Spawn an audio source to play the sound
+            commands.spawn(AudioSourceBundle {
+                source: audio.sound_handle.clone(), // Clone the handle to use it
+                ..Default::default() // Use default values for other fields
+            });
+            println!("Space pressed 2! Playing sound.");
+        } else {
+            println!("Audio not loaded yet.");
+        }
+        // commands.spawn(AudioSourceBundle {
+        //     source: audio.sound_handle.clone(), // Clone the handle to use it
+        //     ..Default::default()                // Use default values for other fields
+        // });
+
+        // for mut transform in query.iter_mut() {
+        //     transform.translation.y += 50.0; // Move entities up by 50 units
+        //     println!("Space pressed! Moved entity up.");
+        // }
+    }
 }
 
 // fn you_joined_ws_msg_handler(mut event_reader: EventReader<YouJoinedWsReceived>) {
@@ -93,16 +144,17 @@ pub fn you_joined_ws_msg_handler(
             pub y_position: f32,
         }
 
-        let you_joined_response_data = serde_json::from_value(e.data.clone()).unwrap_or_else(|op| {
-            info!("Failed to parse incoming websocket message: {}", op);
-            NewJoinerData {
-                player_uuid: "error".to_string(),
-                player_friendly_name: "error".to_string(),
-                color: "error".to_string(),
-                x_position: 0.,
-                y_position: 0.,
-            }
-        });
+        let you_joined_response_data =
+            serde_json::from_value(e.data.clone()).unwrap_or_else(|op| {
+                info!("Failed to parse incoming websocket message: {}", op);
+                NewJoinerData {
+                    player_uuid: "error".to_string(),
+                    player_friendly_name: "error".to_string(),
+                    color: "error".to_string(),
+                    x_position: 0.,
+                    y_position: 0.,
+                }
+            });
 
         info!("In player.rs handling the You joined event {:?}!", e);
         let layout =
@@ -112,62 +164,65 @@ pub fn you_joined_ws_msg_handler(
 
         let blue = "blue".to_string();
 
-
-        commands.spawn((
-            Name::new("foo".to_string()),
-            Player,
-            SpriteBundle {
-                texture: player_assets.ducky.clone(),
-                transform: Transform {
-                    scale: Vec2::splat(4.0).extend(2.0),
-                    translation: Vec3::new(you_joined_response_data.x_position, you_joined_response_data.y_position, 10.0),
+        commands
+            .spawn((
+                Name::new("foo".to_string()),
+                Player,
+                SpriteBundle {
+                    texture: player_assets.ducky.clone(),
+                    transform: Transform {
+                        scale: Vec2::splat(4.0).extend(2.0),
+                        translation: Vec3::new(
+                            you_joined_response_data.x_position,
+                            you_joined_response_data.y_position,
+                            10.0,
+                        ),
+                        ..Default::default()
+                    },
+                    sprite: Sprite {
+                        color: match &(you_joined_response_data.color) {
+                            blue => Color::srgba(0.5, 0.5, 1.0, 1.),
+                            _ => Color::WHITE, // Default color
+                        },
+                        ..Default::default()
+                    },
+                    // Transform::from_scale(Vec2::splat(4.0).extend(2.0)),
                     ..Default::default()
                 },
-                sprite: Sprite {
-                    
-                    color: match &(you_joined_response_data.color) {
-                        blue => Color::srgba(0.5, 0.5, 1.0, 1.),
-                        _ => Color::WHITE, // Default color
+                TextureAtlas {
+                    // color: match you_joined_response_data.color {
+                    //     "blue" => Color::rgba(0.5, 0.5, 1.0),
+                    //     _ => Color::rgba(0, 0, 0, 1)
+                    // },
+                    layout: texture_atlas_layout.clone(),
+                    index: player_animation.get_atlas_index(),
+                },
+                MovementController {
+                    max_speed: 500.,
+                    ..default()
+                },
+                player_animation,
+                StateScoped(Screen::Gameplay),
+            ))
+            .with_children(|parent| {
+                // Text that appears above the sprite
+                parent.spawn(Text2dBundle {
+                    text: Text::from_section(
+                        you_joined_response_data.player_friendly_name, // The text to display
+                        TextStyle {
+                            font: asset_server.load("FiraSans-Bold.ttf"), // Load your font here
+                            font_size: 25.0,
+                            color: Color::WHITE,
+                        },
+                    ),
+                    transform: Transform {
+                        translation: Vec3::new(0.0, 17.0, 1.0), // Position the text above the sprite
+                        scale: Vec3::splat(0.25),
+                        ..Default::default()
                     },
                     ..Default::default()
-                },
-                // Transform::from_scale(Vec2::splat(4.0).extend(2.0)),
-                ..Default::default()
-            },
-            TextureAtlas {
-                // color: match you_joined_response_data.color {
-                //     "blue" => Color::rgba(0.5, 0.5, 1.0),
-                //     _ => Color::rgba(0, 0, 0, 1)
-                // },
-                layout: texture_atlas_layout.clone(),
-                index: player_animation.get_atlas_index(),
-            },
-            MovementController {
-                max_speed: 500.,
-                ..default()
-            },
-            player_animation,
-            StateScoped(Screen::Gameplay),
-        )).with_children(|parent| {
-            // Text that appears above the sprite
-            parent.spawn(Text2dBundle {
-                text: Text::from_section(
-                    you_joined_response_data.player_friendly_name, // The text to display
-                    TextStyle {
-                        font: asset_server.load("FiraSans-Bold.ttf"), // Load your font here
-                        font_size: 25.0,
-                        color: Color::WHITE,
-                    },
-                ),
-                transform: Transform {
-                    translation: Vec3::new(0.0, 17.0, 1.0), // Position the text above the sprite
-                    scale: Vec3::splat(0.25),
-                    ..Default::default()
-                },
-                ..Default::default()
+                });
             });
-        });
-        
     }
 }
 
