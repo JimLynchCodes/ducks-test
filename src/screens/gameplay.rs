@@ -3,7 +3,7 @@
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 
 use crate::{
-    asset_tracking::LoadResource, audio::Music, demo::{level::spawn_level as spawn_level_command, other_player::JoinRequestEvent},
+    asset_tracking::LoadResource, audio::Music, demo::{level::spawn_level as spawn_level_command, websocket_join_msg::JoinRequestEvent},
     screens::Screen,
 };
 

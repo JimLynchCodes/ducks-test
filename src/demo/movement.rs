@@ -17,6 +17,8 @@ use bevy::prelude::*;
 
 use crate::AppSet;
 
+use super::{websocket_join_msg::JoinRequestEvent, websocket_move_msg::MoveRequestEvent};
+
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<MovementController>();
 
@@ -56,6 +58,7 @@ fn apply_movement(
         Query<(&MovementController, &mut Transform)>,
         Query<&mut Transform, With<Camera>>,
     )>,
+    mut move_request_event_writer: EventWriter<MoveRequestEvent>
 ) {
     let mut translation = Vec3 {
         x: 0.,
@@ -68,7 +71,14 @@ fn apply_movement(
         transform.translation += velocity.extend(0.0) * time.delta_seconds();
         translation = velocity.extend(0.0) * time.delta_seconds();
     }
-    for mut camera in &mut param_set.p1().iter_mut() {
-        camera.translation += translation;
+
+    // No need to ping server and update camera if no change
+    if !(translation.x == 0. && translation.y == 0.) {   
+        for mut camera in &mut param_set.p1().iter_mut() {
+            camera.translation += translation;
+            
+            // send movement to server
+            move_request_event_writer.send(MoveRequestEvent(translation.x, translation.y));
+        }
     }
 }

@@ -8,28 +8,28 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 use tungstenite::{connect, http::Response, stream::MaybeTlsStream, Message, WebSocket};
 
-#[derive(Serialize, Deserialize)]
-struct TransformData {
-    translation: Vec3,
-    rotation: Quat,
-    scale: Vec3,
-}
+// #[derive(Serialize, Deserialize)]
+// struct TransformData {
+//     translation: Vec3,
+//     rotation: Quat,
+//     scale: Vec3,
+// }
 
 pub(super) fn plugin(app: &mut App) {
   
     app.add_event::<WebSocketConnectionEvents>();
-    app.add_event::<JoinRequestEvent>();
-    app.add_systems(Update, check_connection_input);
+    // app.add_event::<JoinRequestEvent>();
+    app.add_systems(Startup, actually_connect);
     app.add_systems(Update, setup_connection);
     app.add_systems(Update, handle_tasks);
     // app.add_systems(Update, send_info); // System to handle WebSocket messages
     app.add_systems(Update, recv_ws_msg); // System to handle WebSocket messages
-    app.add_systems(Update, listen_for_bevy_events_for_ws_messages);
+    // app.add_systems(Update, listen_for_bevy_events_for_ws_messages);
 }
 
 #[derive(Component)]
-struct WebSocketClient(
-    (
+pub struct WebSocketClient(
+    pub (
         WebSocket<MaybeTlsStream<TcpStream>>,
         Response<Option<Vec<u8>>>,
     ),
@@ -40,25 +40,14 @@ enum WebSocketConnectionEvents {
     SetupConnection,
 }
 
-#[derive(Debug, serde::Serialize)]
-struct _FooData {
-    friendly_name: String,
-}
-
-#[derive(Debug, serde::Serialize)]
-struct _Foo {
-    action_type: String,
-    data: _FooData,
-}
-
-fn check_connection_input(
+fn actually_connect(
     input: Res<ButtonInput<KeyCode>>,
     mut ev_connect: EventWriter<WebSocketConnectionEvents>,
 ) {
-    if input.just_pressed(KeyCode::Space) {
+    // if input.just_pressed(KeyCode::Space) {
         // set up connection
         ev_connect.send(WebSocketConnectionEvents::SetupConnection);
-    }
+    // }
 }
 
 use thiserror::Error;
@@ -139,38 +128,38 @@ fn handle_tasks(
     }
 }
 
-#[derive(Event)]
-pub struct JoinRequestEvent(pub String);
+// #[derive(Event)]
+// pub struct JoinRequestEvent(pub String);
 
 // Listens for bevy events for ws messages and fires them off to the server
-fn listen_for_bevy_events_for_ws_messages(
-    mut ev_join_request: EventReader<JoinRequestEvent>,
-    mut entities_with_client: Query<(&mut WebSocketClient,)>,
-) {
-    for ev in ev_join_request.read() {
-        println!("heard join request bevy event");
-        for mut client in entities_with_client.iter_mut() {
-            println!("sending join request ws msg");
-            let message = build_join_request_msg(ev.0.clone());
+// fn listen_for_bevy_events_for_ws_messages(
+//     mut ev_join_request: EventReader<JoinRequestEvent>,
+//     mut entities_with_client: Query<(&mut WebSocketClient,)>,
+// ) {
+//     for ev in ev_join_request.read() {
+//         println!("heard join request bevy event");
+//         for mut client in entities_with_client.iter_mut() {
+//             println!("sending join request ws msg");
+//             let message = build_join_request_msg(ev.0.clone());
 
-            match client.0 .0 .0.send(Message::text(message)) {
-                Ok(_) => info!("Join request ws msg successfully sent to server!"),
-                Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */
-                }
-                Err(e) => {
-                    warn!("Could not send the message: {e:?}");
-                }
-            }
-        }
-    }
-}
+//             match client.0 .0 .0.send(Message::text(message)) {
+//                 Ok(_) => info!("Join request ws msg successfully sent to server!"),
+//                 Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */
+//                 }
+//                 Err(e) => {
+//                     warn!("Could not send the message: {e:?}");
+//                 }
+//             }
+//         }
+//     }
+// }
 
 
 fn recv_ws_msg(mut q: Query<(&mut WebSocketClient,)>, mut commands: Commands) {
     for (mut client,) in q.iter_mut() {
         match client.0 .0.read() {
             Ok(m) => {
-                info!("Received message {m:?}");
+                info!("Received message ws connect {m:?}");
                 // send_info(q);
             }
             Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */ }
@@ -179,30 +168,30 @@ fn recv_ws_msg(mut q: Query<(&mut WebSocketClient,)>, mut commands: Commands) {
     }
 }
 
-#[derive(serde::Serialize)]
-struct JoinRequestData {
-    friendly_name: String,
-}
+// #[derive(serde::Serialize)]
+// struct JoinRequestData {
+//     friendly_name: String,
+// }
 
-#[derive(serde::Serialize)]
-struct JoinRequest {
-    action_type: String,
-    data: JoinRequestData,
-}
+// #[derive(serde::Serialize)]
+// struct JoinRequest {
+//     action_type: String,
+//     data: JoinRequestData,
+// }
 
-fn build_join_request_msg(
-    friendly_name: String,
-) -> String {
-    let join_request_hardcoded = JoinRequest {
-        action_type: "join".to_string(),
-        data: JoinRequestData {
-            friendly_name: friendly_name,
-        },
-    };
+// fn build_join_request_msg(
+//     friendly_name: String,
+// ) -> String {
+//     let join_request_hardcoded = JoinRequest {
+//         action_type: "join".to_string(),
+//         data: JoinRequestData {
+//             friendly_name: friendly_name,
+//         },
+//     };
 
-    let g = serde_json::ser::to_string(&join_request_hardcoded).unwrap_or_else(|_op| {
-        println!("Couldn't convert You Quacked struct to string");
-        "".to_string()
-    });
-    g
-}
+//     let g = serde_json::ser::to_string(&join_request_hardcoded).unwrap_or_else(|_op| {
+//         println!("Couldn't convert You Quacked struct to string");
+//         "".to_string()
+//     });
+//     g
+// }
