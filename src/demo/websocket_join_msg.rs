@@ -19,7 +19,6 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_event::<JoinRequestEvent>();
 
-    app.add_systems(Update, recv_ws_msg); // System to handle WebSocket messages
     app.add_systems(Update, join_request_bevy_event_listener);
 }
 
@@ -50,20 +49,6 @@ fn join_request_bevy_event_listener(
                     warn!("Could not send the message: {e:?}");
                 }
             }
-        }
-    }
-}
-
-fn recv_ws_msg(mut q: Query<(&mut WebSocketClient,)>, mut commands: Commands) {
-    for (mut client,) in q.iter_mut() {
-
-        match client.0 .0.read() {
-            Ok(m) => {
-                info!("Received message ws connect {m:?}");
-                // send_info(q);
-            }
-            Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */ }
-            Err(e) => warn!("error receiving: {e}"),
         }
     }
 }
