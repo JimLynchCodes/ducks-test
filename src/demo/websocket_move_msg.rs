@@ -11,7 +11,7 @@ use tungstenite::{connect, http::Response, stream::MaybeTlsStream, Message, WebS
 pub(super) fn plugin(app: &mut App) {
     app.add_event::<MoveRequestEvent>();
 
-    app.add_systems(Update, recv_ws_msg); // System to handle WebSocket messages
+    // app.add_systems(Update, recv_ws_msg); // System to handle WebSocket messages
     app.add_systems(Update, move_request_bevy_event_listener);
 }
 
@@ -45,18 +45,18 @@ fn move_request_bevy_event_listener(
     }
 }
 
-fn recv_ws_msg(mut q: Query<(&mut WebSocketClient,)>, mut commands: Commands) {
-    for (mut client,) in q.iter_mut() {
-        match client.0 .0.read() {
-            Ok(m) => {
-                info!("Received message ws move {m:?}");
-                // send_info(q);
-            }
-            Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */ }
-            Err(e) => warn!("error receiving: {e}"),
-        }
-    }
-}
+// fn recv_ws_msg(mut q: Query<(&mut WebSocketClient,)>, mut commands: Commands) {
+//     for (mut client,) in q.iter_mut() {
+//         match client.0 .0.read() {
+//             Ok(m) => {
+//                 info!("Received message ws move {m:?}");
+//                 // send_info(q);
+//             }
+//             Err(tungstenite::Error::Io(e)) if e.kind() == ErrorKind::WouldBlock => { /* ignore */ }
+//             Err(e) => warn!("error receiving: {e}"),
+//         }
+//     }
+// }
 
 #[derive(serde::Serialize)]
 struct MoveRequestData {

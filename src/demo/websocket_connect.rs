@@ -61,7 +61,7 @@ pub enum S2CActionTypes {
     OtherPlayerGotCrackers,
 
     #[strum(serialize = "you_died", serialize = "yd")]
-    YouGotDied,
+    YouDied,
     #[strum(serialize = "other_player_died", serialize = "opd")]
     OtherPlayerGotDied,
 
@@ -102,6 +102,22 @@ enum WebSocketConnectionEvents {
 pub struct YouJoinedWsReceived {
     pub data: Value,
 }
+
+#[derive(Event, Debug, Clone)]
+pub struct OtherPlayerJoinedWsReceived {
+    pub data: Value,
+}
+
+#[derive(Event, Debug, Clone)]
+pub struct OtherPlayerQuackedWsReceived {
+    pub data: Value,
+}
+
+#[derive(Event, Debug, Clone)]
+pub struct OtherPlayerMovedWsReceived {
+    pub data: Value,
+}
+
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GenericIncomingRequest {
@@ -238,7 +254,10 @@ fn handle_tasks(
 fn recv_ws_msg(
     mut q: Query<(&mut WebSocketClient,)>,
     mut commands: Commands,
-    mut bevy_event_writer: EventWriter<YouJoinedWsReceived>,
+    mut bevy_event_writer_you_joined: EventWriter<YouJoinedWsReceived>,
+    mut bevy_event_writer_other_player_joined: EventWriter<OtherPlayerJoinedWsReceived>,
+    mut bevy_event_writer_other_player_quacked: EventWriter<OtherPlayerQuackedWsReceived>,
+    mut bevy_event_writer_other_player_moved: EventWriter<OtherPlayerMovedWsReceived>,
 ) {
     for (mut client,) in q.iter_mut() {
         match client.0 .0.read() {
@@ -258,21 +277,26 @@ fn recv_ws_msg(
                 match generic_msg.action_type {
                     S2CActionTypes::YouJoined => {
                         info!("Received 'YouJoined' message from ws server!");
-                        bevy_event_writer.send(YouJoinedWsReceived{ data: generic_msg.data });
+                        bevy_event_writer_you_joined.send(YouJoinedWsReceived{ data: generic_msg.data });
                     }
                     S2CActionTypes::OtherPlayerJoined => {
+                        bevy_event_writer_other_player_joined.send(OtherPlayerJoinedWsReceived{ data: generic_msg.data });
                         info!("Received 'OtherPlayerJoined' message from ws server!");
                     }
                     S2CActionTypes::YouQuacked => {
+                        // Basically ignored (bc quack sound already played)
                         info!("Received 'YouQuacked' message from ws server!");
                     }
                     S2CActionTypes::OtherPlayerQuacked => {
+                        bevy_event_writer_other_player_quacked.send(OtherPlayerQuackedWsReceived{ data: generic_msg.data });
                         info!("Received 'OtherPlayerQuacked' message from ws server!");
                     }
                     S2CActionTypes::YouMoved => {
+                        // Basically ignored (bc you already moved)
                         info!("Received 'YouMoved' message from ws server!");
                     }
                     S2CActionTypes::OtherPlayerMoved => {
+                        bevy_event_writer_other_player_moved.send(OtherPlayerMovedWsReceived{ data: generic_msg.data });
                         info!("Received 'OtherPlayerMoved' message from ws server!");
                     }
                     S2CActionTypes::YouGotCrackers => {
@@ -281,8 +305,8 @@ fn recv_ws_msg(
                     S2CActionTypes::OtherPlayerGotCrackers => {
                         info!("Received 'OtherPlayerGotCrackers' message from ws server!");
                     }
-                    S2CActionTypes::YouGotDied => {
-                        info!("Received 'YouGotDied' message from ws server!");
+                    S2CActionTypes::YouDied => {
+                        info!("Received 'YouDied' message from ws server!");
                     }
                     S2CActionTypes::OtherPlayerGotDied => {
                         info!("Received 'OtherPlayerGotDied' message from ws server!");
