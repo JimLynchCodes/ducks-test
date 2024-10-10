@@ -19,6 +19,12 @@ use crate::AppSet;
 
 use super::{websocket_join_msg::JoinRequestEvent, websocket_move_msg::MoveRequestEvent};
 
+pub const MIN_X_POS: f32 = -1000.;
+pub const MIN_Y_POS: f32 = -1000.;
+
+pub const MAX_X_POS: f32 = 1000.;
+pub const MAX_Y_POS: f32 = 1000.;
+
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<MovementController>();
 
@@ -70,12 +76,39 @@ fn apply_movement(
         let velocity = controller.max_speed * controller.intent;
         transform.translation += velocity.extend(0.0) * time.delta_seconds();
         translation = velocity.extend(0.0) * time.delta_seconds();
+
+        if transform.translation.x < MIN_X_POS {
+            transform.translation.x = MIN_X_POS
+        }
+        if transform.translation.y < MIN_Y_POS {
+            transform.translation.y = MIN_Y_POS
+        }
+        if transform.translation.x > MAX_X_POS {
+            transform.translation.x = MAX_X_POS
+        }
+        if transform.translation.y > MAX_Y_POS {
+            transform.translation.y = MAX_Y_POS
+        }
     }
 
     // No need to ping server and update camera if no change
     if !(translation.x == 0. && translation.y == 0.) {   
         for mut camera in &mut param_set.p1().iter_mut() {
             camera.translation += translation;
+
+            // Keep camera movement within bounds
+            if camera.translation.x < MIN_X_POS {
+                camera.translation.x = MIN_X_POS
+            }
+            if camera.translation.y < MIN_Y_POS {
+                camera.translation.y = MIN_Y_POS
+            }
+            if camera.translation.x > MAX_X_POS {
+                camera.translation.x = MAX_X_POS
+            }
+            if camera.translation.y > MAX_Y_POS {
+                camera.translation.y = MAX_Y_POS
+            }
             
             // send movement to server
             move_request_event_writer.send(MoveRequestEvent(translation.x, translation.y));

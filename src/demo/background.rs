@@ -32,7 +32,7 @@ fn create_background(
     asset_server: Res<AssetServer>,
     // mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
-    let texture_handle = asset_server.load("images/grass.png");
+    let texture_handle = asset_server.load("images/ducks-bg-test.png");
 
     println!("creating background...");
 
@@ -40,7 +40,7 @@ fn create_background(
     commands.spawn(SpriteBundle {
         texture: texture_handle,
         transform: Transform {
-            scale: Vec3::new(5.0, 5.0, 0.0), // Adjust scale if necessary,
+            scale: Vec3::new(1.0, 1.0, 0.0), // Adjust scale if necessary,
             translation: Vec3::new(0.0, 0.0, 1.0),
             ..Default::default()
         },
