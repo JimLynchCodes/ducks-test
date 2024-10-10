@@ -14,7 +14,7 @@ use crate::{
     AppSet,
 };
 
-use super::{other_player::OtherPlayerAssets, websocket_connect::OtherPlayerMovedWsReceived};
+use super::{other_player::OtherPlayerAssets, player::QuackAudio, websocket_connect::{OtherPlayerMovedWsReceived, OtherPlayerQuackedWsReceived}};
 
 pub(super) fn plugin(app: &mut App) {
     // Animate and play sound effects based on controls.
@@ -38,28 +38,6 @@ pub(super) fn plugin(app: &mut App) {
 
 // Update the sprite direction and animation state (idling/walking).
 // (handling in other_player.rs now)
-//
-// fn update_animation_movement(
-//     mut event_reader: EventReader<OtherPlayerMovedWsReceived>,
-//     mut player_query: Query<(&MovementController, &mut Sprite, &mut OtherPlayerAnimation)>,
-// ) {
-
-    
-//     for (controller, mut sprite, mut animation) in &mut player_query {
-//         let dx = controller.intent.x;
-//         if dx != 0.0 {
-//             sprite.flip_x = dx < 0.0;
-//         }
-
-//         let animation_state = if controller.intent == Vec2::ZERO {
-//             OtherPlayerAnimationState::Idling
-//         } else {
-//             OtherPlayerAnimationState::Walking
-//         };
-//         animation.update_state(animation_state);
-//     }
-// }
-
 /// Update the animation timer.
 fn update_animation_timer(time: Res<Time>, mut query: Query<&mut OtherPlayerAnimation>) {
     for mut animation in &mut query {
@@ -90,13 +68,13 @@ fn trigger_step_sound_effect(
         {
             let rng = &mut rand::thread_rng();
             let random_step = player_assets.steps.choose(rng).unwrap();
-            commands.spawn((
-                AudioBundle {
-                    source: random_step.clone(),
-                    settings: PlaybackSettings::DESPAWN,
-                },
-                SoundEffect,
-            ));
+            // commands.spawn((
+            //     AudioBundle {
+            //         source: random_step.clone(),
+            //         settings: PlaybackSettings::DESPAWN,
+            //     },
+            //     SoundEffect,
+            // ));
         }
     }
 }

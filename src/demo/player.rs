@@ -16,8 +16,8 @@ use crate::{
 use super::websocket_connect::YouJoinedWsReceived;
 
 #[derive(Resource)]
-struct QuackAudio {
-    sound_handle: Handle<AudioSource>, // Handle for the loaded sound
+pub struct QuackAudio {
+    pub sound_handle: Handle<AudioSource>, // Handle for the loaded sound
 }
 
 pub(super) fn plugin(app: &mut App) {
