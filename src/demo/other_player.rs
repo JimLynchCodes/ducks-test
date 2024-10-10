@@ -9,11 +9,11 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 use tungstenite::{connect, http::Response, stream::MaybeTlsStream, Message, WebSocket};
 
-use super::websocket_connect::{
+use super::{other_player_animation::OtherPlayerAnimation, websocket_connect::{
     OtherPlayerJoinedWsReceived, OtherPlayerMovedWsReceived, S2CActionTypes,
-};
+}};
 
-use crate::{asset_tracking::LoadResource, demo::animation::PlayerAnimation, screens::Screen};
+use crate::{asset_tracking::LoadResource, demo::{other_player_animation::{self, OtherPlayerAnimationState}, player_animation::PlayerAnimation}, screens::Screen};
 
 // OtherPlayerJoinedMsg
 
@@ -45,11 +45,11 @@ pub struct MoveResponseData {
     pub new_y_position: f32,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct YouMovedReceivedWsMsg {
-    pub action_type: S2CActionTypes,
-    pub data: MoveResponseData,
-}
+// #[derive(Debug, Deserialize)]
+// pub struct YouMovedReceivedWsMsg {
+//     pub action_type: S2CActionTypes,
+//     pub data: MoveResponseData,
+// }
 
 #[derive(Debug, Deserialize)]
 pub struct OtherMovedReceivedWsMsg {
@@ -103,6 +103,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, other_player_joined_ws_msg_handler);
     app.add_systems(Update, other_player_moved_ws_msg_handler);
 }
+
 
 // spawn player
 pub fn other_player_joined_ws_msg_handler(
@@ -242,7 +243,8 @@ pub fn other_player_joined_ws_msg_handler(
 pub fn other_player_moved_ws_msg_handler(
     mut event_reader: EventReader<OtherPlayerMovedWsReceived>,
 
-    mut other_players: Query<(&OtherPlayer, &Name, &mut Transform)>, // friendly_name: String,
+    // mut other_players: Query<(&OtherPlayer, &mut Sprite, &Name, &mut Transform)>, // friendly_name: String,
+    mut other_players: Query<(&OtherPlayer, &mut Sprite, &Name, &mut Transform)>, // friendly_name: String,
                                                                      // color: Color,
                                                                      // max_speed: f32,
 ) {
@@ -268,7 +270,9 @@ pub fn other_player_moved_ws_msg_handler(
             e
         );
 
-        for (other_player, name, mut transform) in other_players.iter_mut() {
+        for (other_player, mut sprite, name, mut transform) in other_players.iter_mut() {
+        // for (other_player, mut sprite, name, mut transform) in other_players.iter_mut() {
+            info!("checking vs id map: {}", name.to_string());
             if name.to_string() == other_player_moved_response_data.player_uuid {
                 println!(
                     "Found entity with id: {}",
@@ -282,11 +286,18 @@ pub fn other_player_moved_ws_msg_handler(
                 let dx = other_player_moved_response_data.new_x_position
                     - other_player_moved_response_data.old_x_position;
 
-                if dx < 0. {
-                    transform.scale.x = -1. * transform.scale.x.abs();
-                } else {
-                    transform.scale.x = transform.scale.x.abs();
-                }
+                sprite.flip_x = dx < 0.;
+
+                // other_player_animation.sprite.update_state(OtherPlayerAnimationState::Walking);
+                
+                // sprite.get_field(name)
+
+                // if dx < 0. {
+                //     // sprite.flip_y = 
+                //     // transform.scale.x = -1. * transform.scale.x.abs();
+                // } else {
+                //     transform.scale.x = transform.scale.x.abs();
+                // }
             }
         }
         // }

@@ -9,7 +9,7 @@ use virtual_joystick::{
 use crate::demo::other_player::{unpack_duck_color, NewJoinerData};
 use crate::{
     asset_tracking::LoadResource,
-    demo::{animation::PlayerAnimation, movement::MovementController},
+    demo::{player_animation::PlayerAnimation, movement::MovementController},
     screens::Screen,
 };
 

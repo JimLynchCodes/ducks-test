@@ -5,7 +5,8 @@
 
 use bevy::prelude::*;
 
-mod animation;
+pub mod player_animation;
+pub mod other_player_animation;
 pub mod level;
 mod movement;
 pub mod player;
@@ -19,7 +20,8 @@ pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
         player::plugin,
         background::plugin,
-        animation::plugin,
+        player_animation::plugin,
+        other_player_animation::plugin,
         movement::plugin,
         level::plugin,
         other_player::plugin,
