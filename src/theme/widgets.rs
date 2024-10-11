@@ -1,7 +1,6 @@
 //! Helper traits for creating common widgets.
 
 use bevy::{ecs::system::EntityCommands, prelude::*, ui::Val::*};
-use bevy_simple_text_input::TextInputBundle;
 
 use crate::theme::{interaction::InteractionPalette, palette::*};
 
@@ -114,68 +113,6 @@ impl<T: Spawn> Widgets for T {
         entity
     }
 }
-
-// fn text_input(&mut self, text: impl Into<String>) -> EntityCommands {
-//     let entity = self.spawn(
-
-//         NodeBundle {
-//             style: Style {
-//                 // scale: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-//                 justify_content: JustifyContent::Center,
-//                 align_items: AlignItems::Center,
-//                 ..Default::default()
-//             },
-//             background_color: BackgroundColor(Color::rgb(0.2, 0.2, 0.2)),
-//             ..Default::default()
-//         })
-//         .with_children(|parent| {
-//             // Create a text input field
-//             parent.spawn(TextBundle {
-//                 text: Text::from_section(
-//                     "Enter text: ".to_string(),
-//                     TextStyle {
-//                         // font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-//                         font_size: 30.0,
-//                         color: Color::WHITE,
-//                         ..Default::default()
-//                     },
-//                 ),
-//                 ..Default::default()
-//             })
-//             .insert(TextInput {
-//                 value: String::new(),
-//             });
-//         });
-// TextBundle {
-// text: Text::with_section(
-//     "Enter text: ".to_string(),
-//     TextStyle {
-//         font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-//         font_size: 30.0,
-//         color: Color::WHITE,
-//     },
-//     Default::default(),
-// ),
-// ..Default::default()
-// })
-// .insert(TextInput { value: String::new() });
-// Name::new("Label"),
-// TextBundle::from_section(
-//     text,
-//     TextStyle {
-//         font_size: 24.0,
-//         color: LABEL_TEXT,
-//         ..default()
-//     },
-// )
-// .with_style(Style {
-//     width: Px(500.0),
-//     ..default()
-// }),
-//         // ));
-//         *entity
-//     }
-// }
 
 /// An extension trait for spawning UI containers.
 pub trait Containers {

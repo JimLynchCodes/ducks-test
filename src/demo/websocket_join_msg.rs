@@ -1,12 +1,10 @@
-use std::{io::ErrorKind, net::TcpStream};
+use std::io::ErrorKind;
 
-use bevy::{
-    ecs::world::CommandQueue,
-    prelude::*,
-    tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task},
-};
+use bevy::
+    prelude::*
+;
 use serde::{Deserialize, Serialize};
-use tungstenite::{connect, http::Response, stream::MaybeTlsStream, Message, WebSocket};
+use tungstenite::Message;
 
 #[derive(Serialize, Deserialize)]
 struct TransformData {
@@ -21,9 +19,6 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(Update, join_request_bevy_event_listener);
 }
-
-
-use thiserror::Error;
 
 use super::websocket_connect::WebSocketClient;
 

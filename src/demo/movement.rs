@@ -17,7 +17,7 @@ use bevy::prelude::*;
 
 use crate::AppSet;
 
-use super::{websocket_join_msg::JoinRequestEvent, websocket_move_msg::MoveRequestEvent};
+use super::websocket_move_msg::MoveRequestEvent;
 
 pub const MIN_X_POS: f32 = -1000.;
 pub const MIN_Y_POS: f32 = -1000.;
@@ -58,8 +58,6 @@ impl Default for MovementController {
 
 fn apply_movement(
     time: Res<Time>,
-    // mut movement_query: Query<(&MovementController, &mut Transform)>,
-    // mut cameras: Query<&mut Transform, With<Camera>>,
     mut param_set: ParamSet<(
         Query<(&MovementController, &mut Transform)>,
         Query<&mut Transform, With<Camera>>,
@@ -110,7 +108,7 @@ fn apply_movement(
                 camera.translation.y = MAX_Y_POS
             }
             
-            // send movement to server
+            // send movement request to ws server
             move_request_event_writer.send(MoveRequestEvent(translation.x, translation.y));
         }
     }

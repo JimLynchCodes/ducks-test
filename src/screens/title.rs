@@ -5,7 +5,6 @@ use bevy::prelude::*;
 use crate::{screens::Screen, theme::prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
-    // app.add_plugins(TextInputPlugin);
     app.add_systems(OnEnter(Screen::Title), spawn_title_screen);
 }
 
@@ -15,7 +14,6 @@ fn spawn_title_screen(mut commands: Commands) {
         .insert(StateScoped(Screen::Title))
         .with_children(|children| {
             
-            // children.text_input("foo");
             children.button("Play").observe(enter_gameplay_screen);
             children.button("Credits").observe(enter_credits_screen);
 

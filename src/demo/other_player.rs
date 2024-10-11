@@ -1,37 +1,21 @@
-use std::{io::ErrorKind, net::TcpStream};
+// "Other" player refers to all players that are not the one being controlled by the user
 
 use bevy::{
-    audio::{AudioPlugin, SpatialScale},
-    ecs::world::CommandQueue,
     prelude::*,
     render::texture::{ImageLoaderSettings, ImageSampler},
-    tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task},
 };
-use serde::{Deserialize, Serialize};
-use tungstenite::{connect, http::Response, stream::MaybeTlsStream, Message, WebSocket};
+use serde::Deserialize;
 
-use super::{
-    other_player_animation::OtherPlayerAnimation,
-    player::QuackAudio,
-    websocket_connect::{
-        OtherPlayerJoinedWsReceived, OtherPlayerMovedWsReceived, OtherPlayerQuackedWsReceived,
-        S2CActionTypes,
-    },
+use super::websocket_connect::{
+    OtherPlayerJoinedWsReceived, OtherPlayerMovedWsReceived, OtherPlayerQuackedWsReceived,
+    S2CActionTypes,
 };
 
 use crate::{
-    asset_tracking::LoadResource,
-    demo::{
-        other_player_animation::{self, OtherPlayerAnimationState},
-        player_animation::PlayerAnimation,
-    },
-    screens::Screen,
+    asset_tracking::LoadResource, demo::player_animation::PlayerAnimation, screens::Screen,
 };
 
 use bevy_kira_audio::*;
-// OtherPlayerJoinedMsg
-
-// OtherPlayerJoinedData
 
 #[derive(Debug, Deserialize)]
 pub struct NewJoinerData {
@@ -67,12 +51,6 @@ pub struct QuackResponseData {
     pub player_y_position: f32,
     pub quack_pitch: f32,
 }
-
-// #[derive(Debug, Deserialize)]
-// pub struct YouMovedReceivedWsMsg {
-//     pub action_type: S2CActionTypes,
-//     pub data: MoveResponseData,
-// }
 
 // Tag for the listener (e.g., player or camera)
 #[derive(Component)]
@@ -134,7 +112,6 @@ pub struct SpatialAudio {
     pub max_distance: f32,
 }
 
-
 impl SpatialAudio {
     pub(crate) fn update(
         &self,
@@ -161,7 +138,7 @@ impl SpatialAudio {
     }
 }
 
-// TODO - this not working?
+// TODO - Still need to figure out proper spatial audio...
 pub(crate) fn run_spatial_audio(
     spatial_audio: Res<SpatialAudio>,
     receiver: Query<&GlobalTransform, With<AudioReceiver>>,
@@ -197,7 +174,7 @@ pub(crate) fn run_spatial_audio(
 #[derive(Component, Default)]
 pub struct AudioEmitter {
     /// Audio instances that are played by this emitter
-    ///
+
     /// The same instance should only be on one emitter.
     pub instances: Vec<Handle<AudioInstance>>,
 }
@@ -210,8 +187,6 @@ pub struct AudioEmitter {
 #[derive(Component)]
 pub struct AudioReceiver;
 
-// ====
-
 #[derive(Bundle)]
 struct SpatialAudioBundle {
     audio_source: Handle<bevy_kira_audio::AudioSource>,
@@ -219,21 +194,22 @@ struct SpatialAudioBundle {
     global_transform: GlobalTransform,
 }
 
-const AUDIO_SCALE: f32 = 1. / 100.0;
-
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<OtherPlayer>();
     app.load_resource::<OtherPlayerAssets>();
     app.add_plugins(bevy_kira_audio::AudioPlugin);
     app.insert_resource(SpatialAudio { max_distance: 25. });
     // app.init_asset::<AudioSource>();
-
     // app.insert_resource(SpatialScale { scale: 1.0 }); // Scale of spatial audio
+
     app.add_systems(Update, other_player_joined_ws_msg_handler);
     app.add_systems(Update, other_player_moved_ws_msg_handler);
     app.add_systems(Update, other_player_quacked_handler);
 
-    app.add_systems(Update, run_spatial_audio.run_if(resource_exists::<SpatialAudio>));
+    app.add_systems(
+        Update,
+        run_spatial_audio.run_if(resource_exists::<SpatialAudio>),
+    );
 }
 
 // app.add_plugins(DefaultPlugins.set(AudioPlugin {
@@ -248,9 +224,6 @@ pub fn other_player_joined_ws_msg_handler(
     player_assets_op: Option<Res<OtherPlayerAssets>>,
     asset_server: Res<AssetServer>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-    // friendly_name: String,
-    // color: Color,
-    // max_speed: f32,
 ) {
     if let Some(player_assets) = player_assets_op {
         for e in event_reader.read() {
@@ -304,58 +277,18 @@ pub fn other_player_joined_ws_msg_handler(
                         color: unpack_duck_color(other_player_joined_response_data.color),
                         ..Default::default()
                     },
-                    // Transform::from_scale(Vec2::splat(4.0).extend(2.0)),
                     ..Default::default()
                 },
                 TextureAtlas {
-                    // color: match other_player_joined_response_data.color {
-                    //     "blue" => Color::rgba(0.5, 0.5, 1.0),
-                    //     _ => Color::rgba(0, 0, 0, 1)
-                    // },
                     layout: texture_atlas_layout.clone(),
                     index: player_animation.get_atlas_index(),
                 },
-                // MovementController {
-                //     max_speed: 500.,
-                //     ..default()
-                // },
                 player_animation,
                 StateScoped(Screen::Gameplay),
             );
 
             commands.spawn(parent_entity).with_children(|parent| {
-                // Get the parent's scale
-                // let parent_scale_x = parent.entity().scale.x;
-
-                // let parent_entity = parent.parent_entity();
-
-                // let parent_transform = commands.get_or_spawn(parent_entity);
-
-                // parent_transform.
-                // Ok(transform) => {
-                //     transform.clone();
-                //     // transform
-                //     return 0;
-                // },
-                // Err(_) => 0, // Handle the case where the parent doesn't exist
-                // };
-
-                // println!("Parent entity: {:?}", parent_entity);
-
-                // if let Some(parent_transform) =
-                //     commands.get_component::<Transform>(parent_entity)
-                // {
-                // Get the parent's scale
-                // let parent_scale = parent_transform.scale;
-
-                // Determine the scale for the text
-                // let text_scale_x = if parent_transform.scale.x == -1.0 {
-                //     -1.0
-                // } else {
-                //     1.0
-                // };
-
-                // Text that appears above the sprite
+                // Player name text that appears above the sprite
                 parent.spawn(Text2dBundle {
                     text: Text::from_section(
                         other_player_joined_response_data.player_friendly_name, // The text to display
@@ -380,8 +313,6 @@ pub fn other_player_joined_ws_msg_handler(
 // spawn player
 pub fn other_player_moved_ws_msg_handler(
     mut event_reader: EventReader<OtherPlayerMovedWsReceived>,
-
-    // mut other_players: Query<(&OtherPlayer, &mut Sprite, &Name, &mut Transform)>, // friendly_name: String,
     mut other_players: Query<(&OtherPlayer, &mut Sprite, &Name, &mut Transform)>, // friendly_name: String,
                                                                                   // color: Color,
                                                                                   // max_speed: f32,
@@ -408,15 +339,13 @@ pub fn other_player_moved_ws_msg_handler(
             e
         );
 
-        for (other_player, mut sprite, name, mut transform) in other_players.iter_mut() {
-            // for (other_player, mut sprite, name, mut transform) in other_players.iter_mut() {
+        for (_other_player, mut sprite, name, mut transform) in other_players.iter_mut() {
             info!("checking vs id map: {}", name.to_string());
             if name.to_string() == other_player_moved_response_data.player_uuid {
                 println!(
                     "Found entity with id: {}",
                     other_player_moved_response_data.player_uuid
                 );
-                // move that entity's position
 
                 transform.translation.x = other_player_moved_response_data.new_x_position;
                 transform.translation.y = other_player_moved_response_data.new_y_position;
@@ -425,87 +354,8 @@ pub fn other_player_moved_ws_msg_handler(
                     - other_player_moved_response_data.old_x_position;
 
                 sprite.flip_x = dx < 0.;
-
-                // other_player_animation.sprite.update_state(OtherPlayerAnimationState::Walking);
-
-                // sprite.get_field(name)
-
-                // if dx < 0. {
-                //     // sprite.flip_y =
-                //     // transform.scale.x = -1. * transform.scale.x.abs();
-                // } else {
-                //     transform.scale.x = transform.scale.x.abs();
-                // }
             }
         }
-        // }
-
-        // let layout =
-        //     TextureAtlasLayout::from_grid(UVec2::splat(32), 6, 2, Some(UVec2::splat(1)), None);
-        // let texture_atlas_layout = texture_atlas_layouts.add(layout);
-        // let player_animation = PlayerAnimation::new();
-
-        // let blue = "blue".to_string();
-
-        // commands
-        //     .spawn((
-        //         Name::new(other_player_joined_response_data.player_uuid),
-        //         OtherPlayer,
-        //         SpriteBundle {
-        //             texture: player_assets.ducky.clone(),
-        //             transform: Transform {
-        //                 scale: Vec2::splat(4.0).extend(2.0),
-        //                 translation: Vec3::new(
-        //                     other_player_joined_response_data.x_position,
-        //                     other_player_joined_response_data.y_position,
-        //                     10.0,
-        //                 ),
-        //                 ..Default::default()
-        //             },
-        //             sprite: Sprite {
-        //                 color: match &(other_player_joined_response_data.color) {
-        //                     blue => Color::srgba(0.5, 0.5, 1.0, 1.),
-        //                     _ => Color::WHITE, // Default color
-        //                 },
-        //                 ..Default::default()
-        //             },
-        //             // Transform::from_scale(Vec2::splat(4.0).extend(2.0)),
-        //             ..Default::default()
-        //         },
-        //         TextureAtlas {
-        //             // color: match other_player_joined_response_data.color {
-        //             //     "blue" => Color::rgba(0.5, 0.5, 1.0),
-        //             //     _ => Color::rgba(0, 0, 0, 1)
-        //             // },
-        //             layout: texture_atlas_layout.clone(),
-        //             index: player_animation.get_atlas_index(),
-        //         },
-        //         // MovementController {
-        //         //     max_speed: 500.,
-        //         //     ..default()
-        //         // },
-        //         player_animation,
-        //         StateScoped(Screen::Gameplay),
-        //     ))
-        //     .with_children(|parent| {
-        //         // Text that appears above the sprite
-        //         parent.spawn(Text2dBundle {
-        //             text: Text::from_section(
-        //                 other_player_joined_response_data.player_friendly_name, // The text to display
-        //                 TextStyle {
-        //                     font: asset_server.load("FiraSans-Bold.ttf"), // Load your font here
-        //                     font_size: 25.0,
-        //                     color: Color::WHITE,
-        //                 },
-        //             ),
-        //             transform: Transform {
-        //                 translation: Vec3::new(0.0, 17.0, 1.0), // Position the text above the sprite
-        //                 scale: Vec3::splat(0.25),
-        //                 ..Default::default()
-        //             },
-        //             ..Default::default()
-        //         });
-        //     });
     }
 }
 
@@ -519,14 +369,12 @@ pub fn unpack_duck_color(color: String) -> Color {
     }
 }
 
+// Just plays regular quack sound for now, without spatial audio
 fn other_player_quacked_handler(
     mut commands: Commands,
-    // quack_audio: Res<QuackAudio>,
     mut event_reader: EventReader<OtherPlayerQuackedWsReceived>,
-    audio_assets: Res<Assets<bevy_kira_audio::AudioSource>>,
     asset_server: Res<AssetServer>,
     audio: Res<Audio>,
-    // mut player_query: Query<(&MovementController, &mut Sprite, &mut OtherPlayerAnimation)>,
 ) {
     for e in event_reader.read() {
         let other_player_quacked_response_data = serde_json::from_value(e.data.clone())
@@ -547,7 +395,7 @@ fn other_player_quacked_handler(
         );
 
         // Get the position from the event data
-        let quack_position = Vec3::new(
+        let _quack_position = Vec3::new(
             other_player_quacked_response_data.player_x_position,
             other_player_quacked_response_data.player_y_position,
             0.0, // Assuming 2D game, z-coordinate is 0
@@ -567,15 +415,15 @@ fn other_player_quacked_handler(
         // });
 
         commands
-        .spawn(TransformBundle::from_transform(Transform::from_xyz(other_player_quacked_response_data.player_x_position
-            , other_player_quacked_response_data.player_y_position
-            , 0.0))) // Position emitter to the right
-        .insert(SoundEmitter);
+            .spawn(TransformBundle::from_transform(Transform::from_xyz(
+                other_player_quacked_response_data.player_x_position,
+                other_player_quacked_response_data.player_y_position,
+                0.0,
+            ))) // Position emitter to the right
+            .insert(SoundEmitter);
 
         let audio_handle = asset_server.load("audio/sound_effects/duck-quack.ogg");
         audio.play(audio_handle);
-
-    
 
         // commands.spawn(SpatialAudioBundle {
         //     audio_source: audio_handle.clone(),
@@ -589,7 +437,6 @@ fn other_player_quacked_handler(
         // // Play the audio at the position defined above
         // audio.play(audio_handle.clone());
 
-        
         //     audio_handle,
         //     Transform {
         //         translation: Vec3::new(other_player_quacked_response_data.player_x_position,
@@ -598,7 +445,6 @@ fn other_player_quacked_handler(
         //     },
         //     GlobalTransform::default(), // Required for spatial positioning
         // ));
-        
 
         // commands.spawn((
         //     SpatialAudio {
@@ -616,18 +462,3 @@ fn other_player_quacked_handler(
         // }
     }
 }
-
-//     for (controller, mut sprite, mut animation) in &mut player_query {
-//         let dx = controller.intent.x;
-//         if dx != 0.0 {
-//             sprite.flip_x = dx < 0.0;
-//         }
-
-//         let animation_state = if controller.intent == Vec2::ZERO {
-//             OtherPlayerAnimationState::Idling
-//         } else {
-//             OtherPlayerAnimationState::Walking
-//         };
-//         animation.update_state(animation_state);
-//     }
-// }
