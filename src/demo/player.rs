@@ -49,7 +49,7 @@ fn quack_btn_handler(
                     source: audio.sound_handle.clone(), // Clone the handle to use it
                     ..Default::default()                // Use default values for other fields
                 });
-                println!("Space pressed 2! Playing sound.");
+                println!("Playing YouGotCrackers sound.");
             } else {
                 println!("Audio not loaded yet.");
             }
@@ -168,6 +168,9 @@ pub fn you_joined_ws_msg_handler(
                         cracker_points: 0,
                     }
                 });
+
+            // play sound effect
+
 
             bevy_move_crackers_event_writer.send(MoveCrackersBevyEvent {
                 x_position: you_joined_response_data.cracker_x,

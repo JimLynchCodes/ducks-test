@@ -62,6 +62,23 @@ pub enum S2CActionTypes {
     Empty,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct GotCrackerResponseData {
+    pub player_uuid: String,
+    pub player_friendly_name: String,
+
+    pub old_cracker_x_position: f32,
+    pub old_cracker_y_position: f32,
+
+    pub new_cracker_x_position: f32,
+    pub new_cracker_y_position: f32,
+
+    pub old_cracker_point_value: u64,
+    pub new_cracker_point_value: u64,
+
+    pub new_player_score: u64,
+}
+
 pub(super) fn plugin(app: &mut App) {
     app.add_event::<WebSocketConnectionEvents>();
     app.add_event::<YouJoinedWsReceived>();
@@ -74,7 +91,6 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, setup_connection);
     app.add_systems(Update, handle_tasks);
     app.add_systems(Update, receive_ws_msg);
-
 }
 
 #[derive(Component)]
@@ -100,7 +116,7 @@ pub struct MoveCrackersBevyEvent {
     pub x_position: f32,
     pub y_position: f32,
     pub points: u64,
-    pub you_got_crackers: bool
+    pub you_got_crackers: bool,
 }
 
 #[derive(Event, Debug, Clone)]
@@ -118,7 +134,6 @@ pub struct OtherPlayerMovedWsReceived {
     pub data: Value,
 }
 
-
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GenericIncomingRequest {
     pub action_type: S2CActionTypes,
@@ -133,6 +148,8 @@ fn actually_connect(
 }
 
 use thiserror::Error;
+
+use super::cracker::YouGotCrackerSoundFx;
 
 #[derive(Error, Debug)]
 enum ConnectionSetupError {
@@ -188,12 +205,15 @@ fn setup_connection(
 }
 
 fn receive_ws_msg(
+    mut commands: Commands,
     mut q: Query<(&mut WebSocketClient,)>,
     mut bevy_event_writer_you_joined: EventWriter<YouJoinedWsReceived>,
     mut bevy_event_writer_other_player_joined: EventWriter<OtherPlayerJoinedWsReceived>,
     mut bevy_event_writer_other_player_quacked: EventWriter<OtherPlayerQuackedWsReceived>,
     mut bevy_event_writer_other_player_moved: EventWriter<OtherPlayerMovedWsReceived>,
-    // mut bevy_event_writer_other_player_moved: EventWriter<OtherPlayerMovedWsReceived>,
+    mut bevy_event_writer_move_crackers: EventWriter<MoveCrackersBevyEvent>,
+    audio: Res<YouGotCrackerSoundFx>,
+    audio_assets: Res<Assets<AudioSource>>,
 ) {
     for (mut client,) in q.iter_mut() {
         match client.0 .0.read() {
@@ -212,13 +232,17 @@ fn receive_ws_msg(
                 match generic_msg.action_type {
                     S2CActionTypes::YouJoined => {
                         info!("Received 'YouJoined' message from ws server!");
-                        bevy_event_writer_you_joined.send(YouJoinedWsReceived{ data: generic_msg.data });
+                        bevy_event_writer_you_joined.send(YouJoinedWsReceived {
+                            data: generic_msg.data,
+                        });
 
                         // bevy_event_writer_move_crackers.send(YouJoinedWsReceived{ data: generic_msg.data });
                         // bevy_event_writer_move_crackers.send(YouJoinedWsReceived{ data: generic_msg.data });
                     }
                     S2CActionTypes::OtherPlayerJoined => {
-                        bevy_event_writer_other_player_joined.send(OtherPlayerJoinedWsReceived{ data: generic_msg.data });
+                        bevy_event_writer_other_player_joined.send(OtherPlayerJoinedWsReceived {
+                            data: generic_msg.data,
+                        });
                         info!("Received 'OtherPlayerJoined' message from ws server!");
                     }
                     S2CActionTypes::YouQuacked => {
@@ -226,7 +250,9 @@ fn receive_ws_msg(
                         info!("Received 'YouQuacked' message from ws server!");
                     }
                     S2CActionTypes::OtherPlayerQuacked => {
-                        bevy_event_writer_other_player_quacked.send(OtherPlayerQuackedWsReceived{ data: generic_msg.data });
+                        bevy_event_writer_other_player_quacked.send(OtherPlayerQuackedWsReceived {
+                            data: generic_msg.data,
+                        });
                         info!("Received 'OtherPlayerQuacked' message from ws server!");
                     }
                     S2CActionTypes::YouMoved => {
@@ -234,13 +260,82 @@ fn receive_ws_msg(
                         info!("Received 'YouMoved' message from ws server!");
                     }
                     S2CActionTypes::OtherPlayerMoved => {
-                        bevy_event_writer_other_player_moved.send(OtherPlayerMovedWsReceived{ data: generic_msg.data });
+                        bevy_event_writer_other_player_moved.send(OtherPlayerMovedWsReceived {
+                            data: generic_msg.data,
+                        });
                         info!("Received 'OtherPlayerMoved' message from ws server!");
                     }
                     S2CActionTypes::YouGotCrackers => {
-                        info!("Received 'YouGotCrackers' message from ws server!");
+                        // Handle "YouGotCrackersMsg" from server.
+                        let you_got_crackers_msg_data =
+                            serde_json::from_value(generic_msg.data.clone()).unwrap_or_else(|op| {
+                                info!("Failed to parse incoming websocket message: {}", op);
+                                GotCrackerResponseData {
+                                    player_uuid: "error".to_string(),
+                                    player_friendly_name: "error".to_string(),
+                                    old_cracker_x_position: 0.,
+                                    old_cracker_y_position: 0.,
+                                    new_cracker_x_position: 0.,
+                                    new_cracker_y_position: 0.,
+                                    old_cracker_point_value: 0,
+                                    new_cracker_point_value: 0,
+                                    new_player_score: 0,
+                                }
+                            });
+
+                        info!(
+                            "Received 'YouGotCrackers' message from ws server, new score: {}",
+                            you_got_crackers_msg_data.new_player_score
+                        );
+
+                        // Play special you got crackers sound
+                        if let Some(_) = audio_assets.get(&audio.sound_handle) {
+                            // Spawn an audio source to play the sound
+                            commands.spawn(AudioSourceBundle {
+                                source: audio.sound_handle.clone(),
+                                ..Default::default()
+                            });
+                            println!("Playing your quack sound.");
+                        } else {
+                            println!("Audio not loaded yet.");
+                        }
+
+                        // --> send event for crackers to move
+                        bevy_event_writer_move_crackers.send(MoveCrackersBevyEvent {
+                            x_position: you_got_crackers_msg_data.new_cracker_x_position,
+                            y_position: you_got_crackers_msg_data.new_cracker_y_position,
+                            points: you_got_crackers_msg_data.new_cracker_point_value,
+                            you_got_crackers: true,
+                        });
+
+                        // --> send event to update your score
+                        // TODO
                     }
                     S2CActionTypes::OtherPlayerGotCrackers => {
+                        // Handle "YouGotCrackersMsg" from server.
+                        let other_player_got_crackers_msg_data =
+                            serde_json::from_value(generic_msg.data.clone()).unwrap_or_else(|op| {
+                                info!("Failed to parse incoming websocket message: {}", op);
+                                GotCrackerResponseData {
+                                    player_uuid: "error".to_string(),
+                                    player_friendly_name: "error".to_string(),
+                                    old_cracker_x_position: 0.,
+                                    old_cracker_y_position: 0.,
+                                    new_cracker_x_position: 0.,
+                                    new_cracker_y_position: 0.,
+                                    old_cracker_point_value: 0,
+                                    new_cracker_point_value: 0,
+                                    new_player_score: 0,
+                                }
+                            });
+
+                        // --> send event for crackers to move
+                        bevy_event_writer_move_crackers.send(MoveCrackersBevyEvent {
+                            x_position: other_player_got_crackers_msg_data.new_cracker_x_position,
+                            y_position: other_player_got_crackers_msg_data.new_cracker_y_position,
+                            points: other_player_got_crackers_msg_data.new_cracker_point_value,
+                            you_got_crackers: false,
+                        });
                         info!("Received 'OtherPlayerGotCrackers' message from ws server!");
                     }
                     S2CActionTypes::YouDied => {
