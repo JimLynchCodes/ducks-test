@@ -3,7 +3,7 @@
 
 This is the front-end (Rust) codebase for the online web game and virtual world, _Quackers._
 
-_Note: To run locally this project locally you also need to have the backend websocket server running locally._
+_Note: To run locally this project locally you also need to have the [backend websocket](https://github.com/JimLynchCodes/Quackers-Backend/) server running locally._
 
 ## Running the game
 
