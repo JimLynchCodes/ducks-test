@@ -8,7 +8,7 @@ use serde::Deserialize;
 
 use super::websocket_connect::{
     OtherPlayerJoinedWsReceived, OtherPlayerMovedWsReceived, OtherPlayerQuackedWsReceived,
-    S2CActionTypes,
+    S2CActionTypes, UserDisconnectedBevyEvent,
 };
 
 use crate::{
@@ -44,6 +44,11 @@ pub struct MoveResponseData {
     pub old_y_position: f32,
     pub new_x_position: f32,
     pub new_y_position: f32,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct UserDisconnectedData {
+    pub disconnected_player_uuid: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -208,6 +213,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, other_player_joined_ws_msg_handler);
     app.add_systems(Update, other_player_moved_ws_msg_handler);
     app.add_systems(Update, other_player_quacked_handler);
+    app.add_systems(Update, other_player_disconnected_handler);
 
     app.add_systems(
         Update,
@@ -369,6 +375,32 @@ pub fn unpack_duck_color(color: String) -> Color {
         "green" => Color::srgba(0., 0.9, 0., 1.),
         "white" => Color::WHITE,
         _ => Color::WHITE, // Default color
+    }
+}
+
+fn other_player_disconnected_handler(
+    mut commands: Commands,
+    mut event_reader: EventReader<UserDisconnectedBevyEvent>,
+    other_player_entities: Query<(Entity, &OtherPlayer, &Name)>,
+) {
+    for e in event_reader.read() {
+        let other_player_disconnected_data =
+            serde_json::from_value(e.data.clone()).unwrap_or_else(|op| {
+                info!(
+                    "Failed to parse incoming player disconnected websocket message: {}",
+                    op
+                );
+                UserDisconnectedData {
+                    disconnected_player_uuid: "error".to_string(),
+                }
+            });
+
+        for (entity, _component, name) in other_player_entities.iter() {
+            if name.to_string() == other_player_disconnected_data.disconnected_player_uuid {
+                commands.entity(entity).despawn_recursive();
+                println!("Deleting duck for user: {}", name);
+            };
+        }
     }
 }
 

@@ -60,6 +60,9 @@ pub enum S2CActionTypes {
 
     #[strum(serialize = "empty", serialize = "e")]
     Empty,
+
+    #[strum(serialize = "user_disconnected", serialize = "ud")]
+    UserDisconnected,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -86,6 +89,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_event::<OtherPlayerMovedWsReceived>();
     app.add_event::<OtherPlayerQuackedWsReceived>();
     app.add_event::<MoveCrackersBevyEvent>();
+    app.add_event::<UserDisconnectedBevyEvent>();
 
     app.add_systems(Startup, actually_connect);
     app.add_systems(Update, setup_connection);
@@ -117,6 +121,11 @@ pub struct MoveCrackersBevyEvent {
     pub y_position: f32,
     pub points: u64,
     pub you_got_crackers: bool,
+}
+
+#[derive(Event, Debug, Clone, Deserialize)]
+pub struct UserDisconnectedBevyEvent {
+    pub data: Value
 }
 
 #[derive(Event, Debug, Clone)]
@@ -212,6 +221,7 @@ fn receive_ws_msg(
     mut bevy_event_writer_other_player_quacked: EventWriter<OtherPlayerQuackedWsReceived>,
     mut bevy_event_writer_other_player_moved: EventWriter<OtherPlayerMovedWsReceived>,
     mut bevy_event_writer_move_crackers: EventWriter<MoveCrackersBevyEvent>,
+    mut bevy_event_writer_user_disconnected: EventWriter<UserDisconnectedBevyEvent>,
     audio: Res<YouGotCrackerSoundFx>,
     audio_assets: Res<Assets<AudioSource>>,
 ) {
@@ -343,7 +353,13 @@ fn receive_ws_msg(
                     }
                     S2CActionTypes::OtherPlayerGotDied => {
                         info!("Received 'OtherPlayerGotDied' message from ws server!");
-                    }
+                    },
+                    S2CActionTypes::UserDisconnected => {
+
+                        bevy_event_writer_user_disconnected.send(UserDisconnectedBevyEvent{ data: generic_msg.data });
+
+                        info!("Received 'UserDisconnected' message from ws server!");
+                    },
                     S2CActionTypes::Empty => {
                         info!("Received 'Empty' message from ws server!");
                     }
