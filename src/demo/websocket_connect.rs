@@ -89,6 +89,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_event::<OtherPlayerMovedWsReceived>();
     app.add_event::<OtherPlayerQuackedWsReceived>();
     app.add_event::<MoveCrackersBevyEvent>();
+    app.add_event::<UpdateYourScoreBevyEvent>();
     app.add_event::<UserDisconnectedBevyEvent>();
 
     app.add_systems(Startup, actually_connect);
@@ -121,6 +122,11 @@ pub struct MoveCrackersBevyEvent {
     pub y_position: f32,
     pub points: u64,
     pub you_got_crackers: bool,
+}
+
+#[derive(Event, Debug, Clone, Deserialize)]
+pub struct UpdateYourScoreBevyEvent {
+    pub new_score: u64,
 }
 
 #[derive(Event, Debug, Clone, Deserialize)]
@@ -222,6 +228,7 @@ fn receive_ws_msg(
     mut bevy_event_writer_other_player_moved: EventWriter<OtherPlayerMovedWsReceived>,
     mut bevy_event_writer_move_crackers: EventWriter<MoveCrackersBevyEvent>,
     mut bevy_event_writer_user_disconnected: EventWriter<UserDisconnectedBevyEvent>,
+    mut bevy_event_writer_update_your_score: EventWriter<UpdateYourScoreBevyEvent>,
     audio: Res<YouGotCrackerSoundFx>,
     audio_assets: Res<Assets<AudioSource>>,
 ) {
@@ -319,10 +326,12 @@ fn receive_ws_msg(
                         });
 
                         // --> send event to update your score
-                        // TODO
+                        bevy_event_writer_update_your_score.send(UpdateYourScoreBevyEvent {
+                            new_score: you_got_crackers_msg_data.new_player_score,
+                        });
                     }
                     S2CActionTypes::OtherPlayerGotCrackers => {
-                        // Handle "YouGotCrackersMsg" from server.
+                        // Handle "OtherPlayerGotCrackers" from server.
                         let other_player_got_crackers_msg_data =
                             serde_json::from_value(generic_msg.data.clone()).unwrap_or_else(|op| {
                                 info!("Failed to parse incoming websocket message: {}", op);
