@@ -19,9 +19,6 @@ pub(super) fn plugin(_app: &mut App) {
 
 fn listen_for_move_cracker_bevy_event(
     mut bevy_move_crackers_event_reader: EventReader<MoveCrackersBevyEvent>,
-    // mut cracker_img_query: Query<&mut Transform, With<_CrackerComponent>>,
-    // mut cracker_text_position_query: Query<&mut Transform, With<_CrackerText>>,
-    // mut cracker_text_value_query: Query<&mut Text, With<_CrackerText>>,
     mut param_set: ParamSet<(
         Query<&mut Transform, With<_CrackerComponent>>,
         Query<&mut Transform, With<_CrackerText>>,
@@ -29,16 +26,6 @@ fn listen_for_move_cracker_bevy_event(
     )>,
 ) {
     for e in bevy_move_crackers_event_reader.read() {
-        // let move_crackers_bevy_event =
-        //     serde_json::from_value(e.data.clone()).unwrap_or_else(|op| {
-        //         info!("Failed to parse bevy move crackers event: {}", op);
-        //         MoveCrackersBevyEvent {
-        //             x_position: 0.,
-        //             y_position: 0.,
-        //             points: 0,
-        //             you_got_crackers: false
-        //         }
-        //     });
 
         info!(
             "Moving crackers! x: {:?}, y: {:?}",
