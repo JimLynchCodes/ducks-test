@@ -68,6 +68,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_event::<OtherPlayerJoinedWsReceived>();
     app.add_event::<OtherPlayerMovedWsReceived>();
     app.add_event::<OtherPlayerQuackedWsReceived>();
+    app.add_event::<MoveCrackersBevyEvent>();
 
     app.add_systems(Startup, actually_connect);
     app.add_systems(Update, setup_connection);
@@ -92,6 +93,14 @@ enum WebSocketConnectionEvents {
 #[derive(Event, Debug, Clone)]
 pub struct YouJoinedWsReceived {
     pub data: Value,
+}
+
+#[derive(Event, Debug, Clone, Deserialize)]
+pub struct MoveCrackersBevyEvent {
+    pub x_position: f32,
+    pub y_position: f32,
+    pub points: u64,
+    pub you_got_crackers: bool
 }
 
 #[derive(Event, Debug, Clone)]
@@ -184,6 +193,7 @@ fn receive_ws_msg(
     mut bevy_event_writer_other_player_joined: EventWriter<OtherPlayerJoinedWsReceived>,
     mut bevy_event_writer_other_player_quacked: EventWriter<OtherPlayerQuackedWsReceived>,
     mut bevy_event_writer_other_player_moved: EventWriter<OtherPlayerMovedWsReceived>,
+    // mut bevy_event_writer_other_player_moved: EventWriter<OtherPlayerMovedWsReceived>,
 ) {
     for (mut client,) in q.iter_mut() {
         match client.0 .0.read() {
@@ -203,6 +213,9 @@ fn receive_ws_msg(
                     S2CActionTypes::YouJoined => {
                         info!("Received 'YouJoined' message from ws server!");
                         bevy_event_writer_you_joined.send(YouJoinedWsReceived{ data: generic_msg.data });
+
+                        // bevy_event_writer_move_crackers.send(YouJoinedWsReceived{ data: generic_msg.data });
+                        // bevy_event_writer_move_crackers.send(YouJoinedWsReceived{ data: generic_msg.data });
                     }
                     S2CActionTypes::OtherPlayerJoined => {
                         bevy_event_writer_other_player_joined.send(OtherPlayerJoinedWsReceived{ data: generic_msg.data });

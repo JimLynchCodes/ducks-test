@@ -12,7 +12,7 @@ use crate::{
     screens::Screen,
 };
 
-use super::websocket_connect::YouJoinedWsReceived;
+use super::websocket_connect::{MoveCrackersBevyEvent, YouJoinedWsReceived};
 
 #[derive(Resource)]
 pub struct QuackAudio {
@@ -81,10 +81,7 @@ fn add_quack_button(mut commands: Commands) {
 #[derive(Component)]
 struct QuackBtnButton;
 
-fn quack_sound_setup(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
+fn quack_sound_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let sound_handle = asset_server.load("audio/sound_effects/duck-quack.ogg");
 
     // Store the handle in a resource
@@ -95,10 +92,9 @@ fn spacebar_quack_system(
     mut commands: Commands,
     audio: Res<QuackAudio>,
     keyboard_input: Res<ButtonInput<KeyCode>>, // Input resource for key events
-    audio_assets: Res<Assets<AudioSource>>, // Query to find entities to affect
+    audio_assets: Res<Assets<AudioSource>>,    // Query to find entities to affect
 ) {
     if keyboard_input.just_pressed(KeyCode::Space) {
-
         println!("Space pressed!");
 
         if let Some(_) = audio_assets.get(&audio.sound_handle) {
@@ -111,7 +107,6 @@ fn spacebar_quack_system(
         } else {
             println!("Audio not loaded yet.");
         }
-
     }
 }
 
@@ -146,10 +141,11 @@ pub struct Player;
 // spawn player
 pub fn you_joined_ws_msg_handler(
     mut event_reader: EventReader<YouJoinedWsReceived>,
+    mut bevy_move_crackers_event_writer: EventWriter<MoveCrackersBevyEvent>,
     mut commands: Commands,
     player_assets_op: Option<Res<PlayerAssets>>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-    asset_server: Res<AssetServer>
+    asset_server: Res<AssetServer>,
 ) {
     if let Some(player_assets) = player_assets_op {
         for e in event_reader.read() {
@@ -162,8 +158,23 @@ pub fn you_joined_ws_msg_handler(
                         color: "error".to_string(),
                         x_position: 0.,
                         y_position: 0.,
+                        // player_uuid: sender_game_data.client_id.clone(),
+                        // player_friendly_name: sender_game_data.friendly_name.clone(),
+                        // color: sender_game_data.color.clone(),
+                        // x_position: sender_game_data.x_pos,
+                        // y_position: sender_game_data.x_pos,
+                        cracker_x: 0.,
+                        cracker_y: 0.,
+                        cracker_points: 0,
                     }
                 });
+
+            bevy_move_crackers_event_writer.send(MoveCrackersBevyEvent {
+                x_position: you_joined_response_data.cracker_x,
+                y_position: you_joined_response_data.cracker_y, 
+                points: you_joined_response_data.cracker_points,
+                you_got_crackers: false
+            });
 
             info!("In player.rs handling the You joined event {:?}!", e);
             let layout =
@@ -171,6 +182,7 @@ pub fn you_joined_ws_msg_handler(
             let texture_atlas_layout = texture_atlas_layouts.add(layout);
             let player_animation = PlayerAnimation::new();
 
+            // Spawn your duck!
             commands
                 .spawn((
                     Name::new("foo".to_string()),

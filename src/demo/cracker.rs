@@ -1,4 +1,6 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::info};
+
+use super::websocket_connect::MoveCrackersBevyEvent;
 
 #[derive(Component)]
 struct _CrackerComponent;
@@ -6,17 +8,62 @@ struct _CrackerComponent;
 #[derive(Component)]
 struct _CrackerText;
 
-pub(super) fn plugin(_app: &mut App) {
+const CRACKER_TEXT_OFFSET: f32 = 22.;
 
+pub(super) fn plugin(_app: &mut App) {
     // WIP - cracker stuff
-    // _app.add_systems(Startup, _create_cracker);
-    // _app.add_systems(Startup, _create_cracker_text);
+    _app.add_systems(Startup, _create_cracker);
+    _app.add_systems(Startup, _create_cracker_text);
+    _app.add_systems(Update, listen_for_move_cracker_bevy_event);
 }
 
-fn _create_cracker(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
+fn listen_for_move_cracker_bevy_event(
+    mut bevy_move_crackers_event_reader: EventReader<MoveCrackersBevyEvent>,
+    // mut cracker_img_query: Query<&mut Transform, With<_CrackerComponent>>,
+    // mut cracker_text_position_query: Query<&mut Transform, With<_CrackerText>>,
+    // mut cracker_text_value_query: Query<&mut Text, With<_CrackerText>>,
+    mut param_set: ParamSet<(
+        Query<&mut Transform, With<_CrackerComponent>>,
+        Query<&mut Transform, With<_CrackerText>>,
+        Query<&mut Text, With<_CrackerText>>,
+    )>,
 ) {
+    for e in bevy_move_crackers_event_reader.read() {
+        // let move_crackers_bevy_event =
+        //     serde_json::from_value(e.data.clone()).unwrap_or_else(|op| {
+        //         info!("Failed to parse bevy move crackers event: {}", op);
+        //         MoveCrackersBevyEvent {
+        //             x_position: 0.,
+        //             y_position: 0.,
+        //             points: 0,
+        //             you_got_crackers: false
+        //         }
+        //     });
+
+        info!(
+            "Moving crackers! x: {:?}, y: {:?}",
+            e.x_position, e.y_position
+        );
+
+        for mut transform in param_set.p0().iter_mut() {
+            // Mutate the transform, e.g., moving the cracker component upwards
+            transform.translation.x = e.x_position;
+            transform.translation.y = e.y_position;
+        }
+
+        for mut transform in param_set.p1().iter_mut() {
+            // Mutate the transform, e.g., moving the cracker component upwards
+            transform.translation.x = e.x_position;
+            transform.translation.y = e.y_position + CRACKER_TEXT_OFFSET;
+        }
+
+        for mut transform in param_set.p2().iter_mut() {
+            transform.sections[0].value = e.points.to_string();
+        }
+    }
+}
+
+fn _create_cracker(mut commands: Commands, asset_server: Res<AssetServer>) {
     let texture_handle = asset_server.load("images/cracker-v1.png");
 
     println!("creating cracker...");
@@ -34,8 +81,7 @@ fn _create_cracker(
         .insert(_CrackerComponent);
 }
 
-fn _create_cracker_text(mut commands: Commands, asset_server: Res<AssetServer>,) {
-
+fn _create_cracker_text(mut commands: Commands, asset_server: Res<AssetServer>) {
     println!("inserting text!!");
 
     commands
@@ -49,7 +95,7 @@ fn _create_cracker_text(mut commands: Commands, asset_server: Res<AssetServer>,)
                 },
             ),
             transform: Transform {
-                translation: Vec3::new(0.0, 25.0, 5.0), // Position the text above the crackers & in front of the background
+                translation: Vec3::new(0.0, CRACKER_TEXT_OFFSET, 5.0), // Position the text above the crackers & in front of the background
                 scale: Vec3::new(1., 1., 1.),
                 ..Default::default()
             },
