@@ -221,9 +221,8 @@ fn bevy_event_listener_update_leaderboard(
             });
 
         let mut your_position_text = text.get_mut(your_position_entity.single()).unwrap();
-        your_position_text.sections[0].value = update_leaderboard_msg_data
-            .your_leaderboard_place
-            .to_string();
+        your_position_text.sections[0].value =
+            format_leaderboard_place(update_leaderboard_msg_data.your_leaderboard_place);
 
         let mut place_1_name_text = text.get_mut(place_1_name.single()).unwrap();
         place_1_name_text.sections[0].value =
@@ -321,6 +320,20 @@ fn bevy_event_listener_update_leaderboard(
         // }
         // }
     }
+}
+
+fn format_leaderboard_place(leaderboard_position: u64) -> String {
+    let suffix = match leaderboard_position % 100 {
+        11 | 12 | 13 => "th", // Special case for 11th, 12th, 13th
+        _ => match leaderboard_position % 10 {
+            1 => "st",
+            2 => "nd",
+            3 => "rd",
+            _ => "th",
+        },
+    };
+
+    format!("{}{} Place", leaderboard_position, suffix)
 }
 
 // fn bevy_event_listener_update_leaderboard3(
