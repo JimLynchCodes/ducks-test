@@ -63,6 +63,9 @@ pub enum S2CActionTypes {
 
     #[strum(serialize = "user_disconnected", serialize = "ud")]
     UserDisconnected,
+
+    #[strum(serialize = "leaderboard_update", serialize = "lu")]
+    LeaderboardUpdate,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -90,6 +93,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_event::<OtherPlayerQuackedWsReceived>();
     app.add_event::<MoveCrackersBevyEvent>();
     app.add_event::<UpdateYourScoreBevyEvent>();
+    app.add_event::<UpdateLeaderboardBevyEvent>();
     app.add_event::<UserDisconnectedBevyEvent>();
 
     app.add_systems(Startup, actually_connect);
@@ -125,13 +129,18 @@ pub struct MoveCrackersBevyEvent {
 }
 
 #[derive(Event, Debug, Clone, Deserialize)]
+pub struct UpdateLeaderboardBevyEvent {
+    pub data: Value,
+}
+
+#[derive(Event, Debug, Clone, Deserialize)]
 pub struct UpdateYourScoreBevyEvent {
     pub new_score: u64,
 }
 
 #[derive(Event, Debug, Clone, Deserialize)]
 pub struct UserDisconnectedBevyEvent {
-    pub data: Value
+    pub data: Value,
 }
 
 #[derive(Event, Debug, Clone)]
@@ -229,6 +238,7 @@ fn receive_ws_msg(
     mut bevy_event_writer_move_crackers: EventWriter<MoveCrackersBevyEvent>,
     mut bevy_event_writer_user_disconnected: EventWriter<UserDisconnectedBevyEvent>,
     mut bevy_event_writer_update_your_score: EventWriter<UpdateYourScoreBevyEvent>,
+    mut bevy_event_writer_update_leaderboard: EventWriter<UpdateLeaderboardBevyEvent>,
     audio: Res<YouGotCrackerSoundFx>,
     audio_assets: Res<Assets<AudioSource>>,
 ) {
@@ -362,15 +372,21 @@ fn receive_ws_msg(
                     }
                     S2CActionTypes::OtherPlayerGotDied => {
                         info!("Received 'OtherPlayerGotDied' message from ws server!");
-                    },
+                    }
                     S2CActionTypes::UserDisconnected => {
-
-                        bevy_event_writer_user_disconnected.send(UserDisconnectedBevyEvent{ data: generic_msg.data });
+                        bevy_event_writer_user_disconnected.send(UserDisconnectedBevyEvent {
+                            data: generic_msg.data,
+                        });
 
                         info!("Received 'UserDisconnected' message from ws server!");
-                    },
+                    }
                     S2CActionTypes::Empty => {
                         info!("Received 'Empty' message from ws server!");
+                    }
+                    S2CActionTypes::LeaderboardUpdate => {
+
+                        bevy_event_writer_update_leaderboard.send(UpdateLeaderboardBevyEvent { data: generic_msg.data });
+                        info!("Received 'LeaderboardUpdate' message from ws server!");
                     }
                 }
             }
