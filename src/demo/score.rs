@@ -85,7 +85,6 @@ fn create_score_text(mut commands: Commands, asset_server: Res<AssetServer>) {
         ..Default::default()
     };
 
-
     let position_text = TextBundle {
         style: Style {
             position_type: PositionType::Absolute, // Absolute positioning
@@ -121,24 +120,81 @@ fn bevy_event_listener_update_your_score_text(
     }
 }
 
+// mut param_set: ParamSet<(
+//     Query<&mut Transform, With<_CrackerComponent>>,
+//     Query<&mut Transform, With<_CrackerText>>,
+//     Query<&mut Text, With<_CrackerText>>,
+// )>,
+
+// mut param_set: ParamSet<(
+//     Query<&mut Text, With<LeaderboardName1stPlaceText>>,
+//     Query<&mut Text, With<LeaderboardName2ndPlaceText>>,
+//     Query<&mut Text, With<LeaderboardName3rdPlaceText>>,
+//     Query<&mut Text, With<LeaderboardName4thPlaceText>>,
+//     Query<&mut Text, With<LeaderboardName5thPlaceText>>,
+//     Query<&mut Text, With<LeaderboardScore1stPlaceText>>,
+//     Query<&mut Text, With<LeaderboardScore2ndPlaceText>>,
+//     Query<&mut Text, With<LeaderboardScore3rdPlaceText>>,
+//     Query<&mut Text, With<LeaderboardScore4thPlaceText>>,
+//     Query<&mut Text, With<LeaderboardScore5thPlaceText>>,
+// )>,
+
+// mut leaderboard_name_1st_place_text: Query<&mut Text, With<LeaderboardName1stPlaceText>>,
+// mut leaderboard_name_2nd_place_text: Query<&mut Text, With<LeaderboardName2ndPlaceText>>,
+// mut leaderboard_name_3rd_place_text: Query<&mut Text, With<LeaderboardName3rdPlaceText>>,
+// mut leaderboard_name_4th_place_text: Query<&mut Text, With<LeaderboardName4thPlaceText>>,
+// mut leaderboard_name_5th_place_text: Query<&mut Text, With<LeaderboardName5thPlaceText>>,
+// mut leaderboard_score_1st_place_text: Query<&mut Text, With<LeaderboardScore1stPlaceText>>,
+// mut leaderboard_score_2nd_place_text: Query<&mut Text, With<LeaderboardScore2ndPlaceText>>,
+// mut leaderboard_score_3rd_place_text: Query<&mut Text, With<LeaderboardScore3rdPlaceText>>,
+// mut leaderboard_score_4th_place_text: Query<&mut Text, With<LeaderboardScore4thPlaceText>>,
+// mut leaderboard_score_5th_place_text: Query<&mut Text, With<LeaderboardScore5thPlaceText>>,
+
+// mut your_position_text: Query<&mut Text, With<YourPositionText>>,
+// mut event_reader: EventReader<UpdateLeaderboardBevyEvent>,
+// mut param_set: ParamSet<(
+//     Query<&mut Text, With<YourPositionText>>,
+//     Query<&mut Text, With<LeaderboardName1stPlaceText>>,
+//     Query<&mut Text, With<LeaderboardName2ndPlaceText>>,
+//     Query<&mut Text, With<LeaderboardName3rdPlaceText>>,
+//     Query<&mut Text, With<LeaderboardName4thPlaceText>>,
+//     Query<&mut Text, With<LeaderboardName5thPlaceText>>,
+//     Query<&mut Text, With<LeaderboardScore1stPlaceText>>,
+//     Query<&mut Text, With<LeaderboardScore2ndPlaceText>>,
+//     Query<&mut Text, With<LeaderboardScore3rdPlaceText>>,
+//     Query<&mut Text, With<LeaderboardScore4thPlaceText>>,
+//     Query<&mut Text, With<LeaderboardScore5thPlaceText>>,
+// )>,
+
+// fn bevy_event_listener_update_leaderboard(
+//     mut leaderboard_name_1st_place_text: Query<&mut Text, With<LeaderboardName1stPlaceText>>,
+//     mut leaderboard_name_2nd_place_text: Query<&mut Text, With<LeaderboardName2ndPlaceText>>,
+//     mut leaderboard_name_3rd_place_text: Query<&mut Text, With<LeaderboardName3rdPlaceText>>,
+//     mut leaderboard_name_4th_place_text: Query<&mut Text, With<LeaderboardName4thPlaceText>>,
+//     mut leaderboard_name_5th_place_text: Query<&mut Text, With<LeaderboardName5thPlaceText>>,
+//     mut leaderboard_score_1st_place_text: Query<&mut Text, With<LeaderboardScore1stPlaceText>>,
+//     mut leaderboard_score_2nd_place_text: Query<&mut Text, With<LeaderboardScore2ndPlaceText>>,
+//     mut leaderboard_score_3rd_place_text: Query<&mut Text, With<LeaderboardScore3rdPlaceText>>,
+//     mut leaderboard_score_4th_place_text: Query<&mut Text, With<LeaderboardScore4thPlaceText>>,
+//     mut leaderboard_score_5th_place_text: Query<&mut Text, With<LeaderboardScore5thPlaceText>>,
+// ) {
+
 fn bevy_event_listener_update_leaderboard(
     mut event_reader: EventReader<UpdateLeaderboardBevyEvent>,
-    // mut score_text: Query<&mut Text, With<YourScoreText>>,
-
-    mut your_position_text: Query<&mut Text, With<YourPositionText>>,
-    mut leaderboard_name_1st_place_text: Query<&mut Text, With<LeaderboardName1stPlaceText>>,
-    mut leaderboard_name_2nd_place_text: Query<&mut Text, With<LeaderboardName2ndPlaceText>>,
-    mut leaderboard_name_3rd_place_text: Query<&mut Text, With<LeaderboardName3rdPlaceText>>,
-    mut leaderboard_name_4th_place_text: Query<&mut Text, With<LeaderboardName4thPlaceText>>,
-    mut leaderboard_name_5th_place_text: Query<&mut Text, With<LeaderboardName5thPlaceText>>,
-    mut leaderboard_score_1st_place_text: Query<&mut Text, With<LeaderboardScore1stPlaceText>>,
-    mut leaderboard_score_2nd_place_text: Query<&mut Text, With<LeaderboardScore2ndPlaceText>>,
-    mut leaderboard_score_3rd_place_text: Query<&mut Text, With<LeaderboardScore3rdPlaceText>>,
-    mut leaderboard_score_4th_place_text: Query<&mut Text, With<LeaderboardScore4thPlaceText>>,
-    mut leaderboard_score_5th_place_text: Query<&mut Text, With<LeaderboardScore5thPlaceText>>,
+    mut text: Query<&mut Text>,
+    your_position_entity: Query<Entity, With<YourPositionText>>,
+    place_1_name: Query<Entity, With<LeaderboardName1stPlaceText>>,
+    place_2_name: Query<Entity, With<LeaderboardName2ndPlaceText>>,
+    place_3_name: Query<Entity, With<LeaderboardName3rdPlaceText>>,
+    place_4_name: Query<Entity, With<LeaderboardName4thPlaceText>>,
+    place_5_name: Query<Entity, With<LeaderboardName5thPlaceText>>,
+    place_1_score: Query<Entity, With<LeaderboardScore1stPlaceText>>,
+    place_2_score: Query<Entity, With<LeaderboardScore2ndPlaceText>>,
+    place_3_score: Query<Entity, With<LeaderboardScore3rdPlaceText>>,
+    place_4_score: Query<Entity, With<LeaderboardScore4thPlaceText>>,
+    place_5_score: Query<Entity, With<LeaderboardScore5thPlaceText>>,
 ) {
     for e in event_reader.read() {
-    
         info!("heard the update score event!");
 
         let default_leaderboard_data = LeaderboardUpdateData {
@@ -158,59 +214,221 @@ fn bevy_event_listener_update_leaderboard(
             leaderboard_score_5th_place: 0,
         };
 
-        let update_leaderboard_msg_data = serde_json::from_value(e.data.clone()).unwrap_or_else(|op| {
-            info!("Failed to parse incoming websocket message: {}", op);
-            default_leaderboard_data
-        });
+        let update_leaderboard_msg_data =
+            serde_json::from_value(e.data.clone()).unwrap_or_else(|op| {
+                info!("Failed to parse incoming websocket message: {}", op);
+                default_leaderboard_data
+            });
 
-        // Update your position
-        for mut text in your_position_text.iter_mut() {
-            text.sections[0].value = format!("Position: {:?}", update_leaderboard_msg_data.your_leaderboard_place.clone());
-        }
+        let mut your_position_text = text.get_mut(your_position_entity.single()).unwrap();
+        your_position_text.sections[0].value = update_leaderboard_msg_data
+            .your_leaderboard_place
+            .to_string();
 
-        // update the 5 name fields
-        for mut text in leaderboard_name_1st_place_text.iter_mut() {
-            text.sections[0].value = update_leaderboard_msg_data.leaderboard_name_1st_place.clone();
-        }
+        let mut place_1_name_text = text.get_mut(place_1_name.single()).unwrap();
+        place_1_name_text.sections[0].value =
+            update_leaderboard_msg_data.leaderboard_name_1st_place;
 
-        for mut text in leaderboard_name_2nd_place_text.iter_mut() {
-            text.sections[0].value = update_leaderboard_msg_data.leaderboard_name_2nd_place.clone();
-        }
+        let mut place_1_name_text = text.get_mut(place_2_name.single()).unwrap();
+        place_1_name_text.sections[0].value =
+            update_leaderboard_msg_data.leaderboard_name_2nd_place;
 
-        for mut text in leaderboard_name_3rd_place_text.iter_mut() {
-            text.sections[0].value = update_leaderboard_msg_data.leaderboard_name_3rd_place.clone();
-        }
+        let mut place_3_name_text = text.get_mut(place_3_name.single()).unwrap();
+        place_3_name_text.sections[0].value =
+            update_leaderboard_msg_data.leaderboard_name_3rd_place;
 
-        for mut text in leaderboard_name_4th_place_text.iter_mut() {
-            text.sections[0].value = update_leaderboard_msg_data.leaderboard_name_4th_place.clone();
-        }
+        let mut place_4_name_text = text.get_mut(place_4_name.single()).unwrap();
+        place_4_name_text.sections[0].value =
+            update_leaderboard_msg_data.leaderboard_name_4th_place;
 
-        for mut text in leaderboard_name_5th_place_text.iter_mut() {
-            text.sections[0].value = update_leaderboard_msg_data.leaderboard_name_5th_place.clone();
+        let mut place_5_name_text = text.get_mut(place_5_name.single()).unwrap();
+        place_5_name_text.sections[0].value =
+            update_leaderboard_msg_data.leaderboard_name_5th_place;
 
-        // update the 5 score fields
-        for mut text in leaderboard_score_1st_place_text.iter_mut() {
-            text.sections[0].value = update_leaderboard_msg_data.leaderboard_score_1st_place.to_string();
-        }
+        let mut place_1_score_text = text.get_mut(place_1_score.single()).unwrap();
+        place_1_score_text.sections[0].value = update_leaderboard_msg_data
+            .leaderboard_score_1st_place
+            .to_string();
 
-        for mut text in leaderboard_score_2nd_place_text.iter_mut() {
-            text.sections[0].value = update_leaderboard_msg_data.leaderboard_score_2nd_place.to_string();
-        }
+        let mut place_1_score_text = text.get_mut(place_2_score.single()).unwrap();
+        place_1_score_text.sections[0].value = update_leaderboard_msg_data
+            .leaderboard_score_2nd_place
+            .to_string();
 
-        for mut text in leaderboard_score_3rd_place_text.iter_mut() {
-            text.sections[0].value = update_leaderboard_msg_data.leaderboard_score_3rd_place.to_string();
-        }
+        let mut place_3_score_text = text.get_mut(place_3_score.single()).unwrap();
+        place_3_score_text.sections[0].value = update_leaderboard_msg_data
+            .leaderboard_score_3rd_place
+            .to_string();
 
-        for mut text in leaderboard_score_4th_place_text.iter_mut() {
-            text.sections[0].value = update_leaderboard_msg_data.leaderboard_score_4th_place.to_string();
-        }
+        let mut place_4_score_text = text.get_mut(place_4_score.single()).unwrap();
+        place_4_score_text.sections[0].value = update_leaderboard_msg_data
+            .leaderboard_score_4th_place
+            .to_string();
 
-        for mut text in leaderboard_score_5th_place_text.iter_mut() {
-            text.sections[0].value = update_leaderboard_msg_data.leaderboard_score_5th_place.to_string();
-        }
+        let mut place_5_score_text = text.get_mut(place_5_score.single()).unwrap();
+        place_5_score_text.sections[0].value = update_leaderboard_msg_data
+            .leaderboard_score_5th_place
+            .to_string();
+
+        // text.sections[0].value = format!("Position: {:?}", update_leaderboard_msg_data.your_leaderboard_place.clone());
+        //     // Update your position
+
+        // param_set.p0()
+
+        // for mut text in param_set.q0().iter_mut() {
+        //     text.sections[0].value = format!("Position: {:?}", update_leaderboard_msg_data.your_leaderboard_place.clone());
+        // }
+
+        // // update the 5 name fields
+        // for mut text in leaderboard_name_1st_place_text.iter_mut() {
+        //     text.sections[0].value = update_leaderboard_msg_data.leaderboard_name_1st_place.clone();
+        // }
+
+        // for mut text in leaderboard_name_2nd_place_text.iter_mut() {
+        //     text.sections[0].value = update_leaderboard_msg_data.leaderboard_name_2nd_place.clone();
+        // }
+
+        // for mut text in leaderboard_name_3rd_place_text.iter_mut() {
+        //     text.sections[0].value = update_leaderboard_msg_data.leaderboard_name_3rd_place.clone();
+        // }
+
+        // for mut text in leaderboard_name_4th_place_text.iter_mut() {
+        //     text.sections[0].value = update_leaderboard_msg_data.leaderboard_name_4th_place.clone();
+        // }
+
+        // for mut text in leaderboard_name_5th_place_text.iter_mut() {
+        //     text.sections[0].value = update_leaderboard_msg_data.leaderboard_name_5th_place.clone();
+
+        // // update the 5 score fields
+        // for mut text in leaderboard_score_1st_place_text.iter_mut() {
+        //     text.sections[0].value = update_leaderboard_msg_data.leaderboard_score_1st_place.to_string();
+        // }
+
+        // for mut text in leaderboard_score_2nd_place_text.iter_mut() {
+        //     text.sections[0].value = update_leaderboard_msg_data.leaderboard_score_2nd_place.to_string();
+        // }
+
+        // for mut text in leaderboard_score_3rd_place_text.iter_mut() {
+        //     text.sections[0].value = update_leaderboard_msg_data.leaderboard_score_3rd_place.to_string();
+        // }
+
+        // for mut text in leaderboard_score_4th_place_text.iter_mut() {
+        //     text.sections[0].value = update_leaderboard_msg_data.leaderboard_score_4th_place.to_string();
+        // }
+
+        // for mut text in leaderboard_score_5th_place_text.iter_mut() {
+        //     text.sections[0].value = update_leaderboard_msg_data.leaderboard_score_5th_place.to_string();
+        // }
+        // }
     }
 }
-}
+
+// fn bevy_event_listener_update_leaderboard3(
+//     mut event_reader: EventReader<UpdateLeaderboardBevyEvent>,
+//     mut text: Query<&mut Text>,
+//     place_1_name: Query<Entity, With<LeaderboardName1stPlaceText>>,
+//     place_2_name: Query<Entity, With<LeaderboardName2ndPlaceText>>,
+//     place_3_name: Query<Entity, With<LeaderboardName3rdPlaceText>>,
+//     place_4_name: Query<Entity, With<LeaderboardName4thPlaceText>>,
+//     place_5_name: Query<Entity, With<LeaderboardName5thPlaceText>>,
+//     // You can do the same as above with the other texts that you want to access
+//     // Idk what this is, but it can prolly be done the same with
+//     // mut your_position_text: Query<&mut Text, With<YourPositionText>>,
+// ) {
+//     // Then to get the first place name:
+//     let extracted_place_1_name = text.get_mut(place_1_name.single());
+//     let extracted_place_2_name = text.get_mut(place_2_name.single());
+//     // Rest of your code here
+// }
+
+// fn bevy_event_listener_update_leaderboard2(// mut your_position_text: Query<&mut Text, With<YourPositionText>>,
+// mut event_reader: EventReader<UpdateLeaderboardBevyEvent>,
+// mut leaderboard_name_1st_place_text: Query<&mut Text, (With<LeaderboardName1stPlaceText>, Without<LeaderboardScore1stPlaceText>)>,
+// mut leaderboard_name_2nd_place_text: Query<&mut Text, (With<LeaderboardName2ndPlaceText>, Without<LeaderboardScore2ndPlaceText>)>,
+// mut leaderboard_name_3rd_place_text: Query<&mut Text, (With<LeaderboardName3rdPlaceText>, Without<LeaderboardScore3rdPlaceText>)>,
+// mut leaderboard_name_4th_place_text: Query<&mut Text, (With<LeaderboardName4thPlaceText>, Without<LeaderboardScore4thPlaceText>)>,
+// mut leaderboard_name_5th_place_text: Query<&mut Text, (With<LeaderboardName5thPlaceText>, Without<LeaderboardScore5thPlaceText>)>,
+// mut leaderboard_score_1st_place_text: Query<&mut Text, (With<LeaderboardScore1stPlaceText>, Without<LeaderboardName1stPlaceText>)>,
+// mut leaderboard_score_2nd_place_text: Query<&mut Text, (With<LeaderboardScore2ndPlaceText>, Without<LeaderboardName2ndPlaceText>)>,
+// mut leaderboard_score_3rd_place_text: Query<&mut Text, (With<LeaderboardScore3rdPlaceText>, Without<LeaderboardName3rdPlaceText>)>,
+// mut leaderboard_score_4th_place_text: Query<&mut Text, (With<LeaderboardScore4thPlaceText>, Without<LeaderboardName4thPlaceText>)>,
+// mut leaderboard_score_5th_place_text: Query<&mut Text, first_place: Query<Entity, With<LeaderboardName1stPlaceText>>>,
+// ) {
+
+// for e in event_reader.read() {
+
+//     info!("heard the update score event!");
+
+//     let default_leaderboard_data = LeaderboardUpdateData {
+//         your_points: 0,
+//         your_leaderboard_place: 0,
+
+//         leaderboard_name_1st_place: "--".to_string(),
+//         leaderboard_name_2nd_place: "--".to_string(),
+//         leaderboard_name_3rd_place: "--".to_string(),
+//         leaderboard_name_4th_place: "--".to_string(),
+//         leaderboard_name_5th_place: "--".to_string(),
+
+//         leaderboard_score_1st_place: 0,
+//         leaderboard_score_2nd_place: 0,
+//         leaderboard_score_3rd_place: 0,
+//         leaderboard_score_4th_place: 0,
+//         leaderboard_score_5th_place: 0,
+//     };
+
+//     let update_leaderboard_msg_data = serde_json::from_value(e.data.clone()).unwrap_or_else(|op| {
+//         info!("Failed to parse incoming websocket message: {}", op);
+//         default_leaderboard_data
+//     });
+
+//     // Update your position
+//     for mut text in your_position_text.iter_mut() {
+//         text.sections[0].value = format!("Position: {:?}", update_leaderboard_msg_data.your_leaderboard_place.clone());
+//     }
+
+// // update the 5 name fields
+// for mut text in leaderboard_name_1st_place_text.iter_mut() {
+//     text.sections[0].value = update_leaderboard_msg_data.leaderboard_name_1st_place.clone();
+// }
+
+// for mut text in leaderboard_name_2nd_place_text.iter_mut() {
+//     text.sections[0].value = update_leaderboard_msg_data.leaderboard_name_2nd_place.clone();
+// }
+
+// for mut text in leaderboard_name_3rd_place_text.iter_mut() {
+//     text.sections[0].value = update_leaderboard_msg_data.leaderboard_name_3rd_place.clone();
+// }
+
+// for mut text in leaderboard_name_4th_place_text.iter_mut() {
+//     text.sections[0].value = update_leaderboard_msg_data.leaderboard_name_4th_place.clone();
+// }
+
+// for mut text in leaderboard_name_5th_place_text.iter_mut() {
+//     text.sections[0].value = update_leaderboard_msg_data.leaderboard_name_5th_place.clone();
+
+// // update the 5 score fields
+// for mut text in leaderboard_score_1st_place_text.iter_mut() {
+//     text.sections[0].value = update_leaderboard_msg_data.leaderboard_score_1st_place.to_string();
+// }
+
+// for mut text in leaderboard_score_2nd_place_text.iter_mut() {
+//     text.sections[0].value = update_leaderboard_msg_data.leaderboard_score_2nd_place.to_string();
+// }
+
+// for mut text in leaderboard_score_3rd_place_text.iter_mut() {
+//     text.sections[0].value = update_leaderboard_msg_data.leaderboard_score_3rd_place.to_string();
+// }
+
+// for mut text in leaderboard_score_4th_place_text.iter_mut() {
+//     text.sections[0].value = update_leaderboard_msg_data.leaderboard_score_4th_place.to_string();
+// }
+
+// for mut text in leaderboard_score_5th_place_text.iter_mut() {
+//     text.sections[0].value = update_leaderboard_msg_data.leaderboard_score_5th_place.to_string();
+// }
+// }
+// }
+// }
 
 struct Score {
     name: String,
