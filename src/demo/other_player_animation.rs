@@ -4,7 +4,8 @@
 //! - [Sprite animation](https://github.com/bevyengine/bevy/blob/latest/examples/2d/sprite_animation.rs)
 //! - [Timers](https://github.com/bevyengine/bevy/blob/latest/examples/time/timers.rs)
 
-use bevy::prelude::*;
+use bevy::{color::palettes::css::BLUE, prelude::*, render::texture::{ImageLoaderSettings, ImageSampler}, sprite::MaterialMesh2dBundle
+};
 use rand::prelude::*;
 use std::time::Duration;
 
@@ -14,7 +15,11 @@ use crate::{
     AppSet,
 };
 
-use super::{other_player::OtherPlayerAssets, player::QuackAudio, websocket_connect::{OtherPlayerMovedWsReceived, OtherPlayerQuackedWsReceived}};
+use super::{
+    other_player::{Emitter, OtherPlayerAssets},
+    player::QuackAudio,
+    websocket_connect::{OtherPlayerMovedWsReceived, OtherPlayerQuackedWsReceived},
+};
 
 pub(super) fn plugin(app: &mut App) {
     // Animate and play sound effects based on controls.
@@ -59,15 +64,19 @@ fn update_animation_atlas(mut query: Query<(&OtherPlayerAnimation, &mut TextureA
 fn trigger_step_sound_effect(
     mut commands: Commands,
     player_assets: Res<OtherPlayerAssets>,
-    mut step_query: Query<&OtherPlayerAnimation>,
+    mut step_query: Query<(&OtherPlayerAnimation, &Transform)>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    for animation in &mut step_query {
+    for (animation, transform) in &mut step_query {
         if animation.state == OtherPlayerAnimationState::Walking
             && animation.changed()
             && (animation.frame == 2 || animation.frame == 5)
         {
             let rng = &mut rand::thread_rng();
             let random_step = player_assets.steps.choose(rng).unwrap();
+
+            // TODO - this is not spatial sound currently
             // commands.spawn((
             //     AudioBundle {
             //         source: random_step.clone(),
@@ -75,6 +84,25 @@ fn trigger_step_sound_effect(
             //     },
             //     SoundEffect,
             // ));
+
+            // Sound
+            commands.spawn((
+                MaterialMesh2dBundle {
+                    mesh: meshes.add(Circle::new(15.0)).into(),
+                    material: materials.add(Color::from(BLUE)),
+                    transform: Transform::from_translation(Vec3::new(
+                        transform.translation.x,
+                        transform.translation.y,
+                        100.0,
+                    )),
+                    ..default()
+                },
+                Emitter::default(),
+                AudioBundle {
+                    source: random_step.clone(),
+                    settings: PlaybackSettings::ONCE.with_spatial(true),
+                },
+            ));
         }
     }
 }
@@ -87,6 +115,8 @@ pub struct OtherPlayerAnimation {
     timer: Timer,
     frame: usize,
     state: OtherPlayerAnimationState,
+    loops: usize, // New field to track completed loops
+    max_loops: Option<usize>,
 }
 
 #[derive(Reflect, PartialEq)]
@@ -110,6 +140,8 @@ impl OtherPlayerAnimation {
             timer: Timer::new(Self::IDLE_INTERVAL, TimerMode::Repeating),
             frame: 0,
             state: OtherPlayerAnimationState::Idling,
+            loops: 0,
+            max_loops: None, // No loop limit for idling
         }
     }
 
@@ -118,6 +150,8 @@ impl OtherPlayerAnimation {
             timer: Timer::new(Self::WALKING_INTERVAL, TimerMode::Repeating),
             frame: 0,
             state: OtherPlayerAnimationState::Walking,
+            loops: 0,
+            max_loops: Some(1),
         }
     }
 
@@ -136,6 +170,20 @@ impl OtherPlayerAnimation {
                 OtherPlayerAnimationState::Idling => Self::IDLE_FRAMES,
                 OtherPlayerAnimationState::Walking => Self::WALKING_FRAMES,
             };
+
+        // Increment loop count when animation completes a full loop
+        if self.frame == 0 {
+            self.loops += 1;
+
+            // Check if max_loops is set and if we've reached the limit
+            if let Some(max_loops) = self.max_loops {
+                println!("Checking max loops: {} vs {:?}", self.loops, self.max_loops);
+                if self.loops >= max_loops {
+                    // Stop the animation (you can decide whether to stop, reset, or switch state)
+                    self.update_state(OtherPlayerAnimationState::Idling); // For example, switch back to idling
+                }
+            }
+        }
     }
 
     /// Update animation state if it changes.
@@ -145,6 +193,8 @@ impl OtherPlayerAnimation {
                 OtherPlayerAnimationState::Idling => *self = Self::idling(),
                 OtherPlayerAnimationState::Walking => *self = Self::walking(),
             }
+
+            self.loops = 0; // Reset loop count when switching states
         }
     }
 

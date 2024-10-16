@@ -10,14 +10,27 @@ use bevy::{
 };
 use serde::Deserialize;
 
-use super::websocket_connect::{
+use super::{player_animation::PlayerAnimationState, websocket_connect::{
     OtherPlayerJoinedWsReceived, OtherPlayerMovedWsReceived, OtherPlayerQuackedWsReceived,
     S2CActionTypes, UserDisconnectedBevyEvent,
-};
+}};
 
 use crate::{
-    asset_tracking::LoadResource, demo::player_animation::PlayerAnimation, screens::Screen,
+    asset_tracking::LoadResource, demo::other_player_animation::{OtherPlayerAnimation, OtherPlayerAnimationState}, screens::Screen,
 };
+
+// impl PlayerAnimation {
+//     pub fn play_walking(&mut self) {
+//         // Assuming you have a way to set the current animation state
+//         // You might have an enum or some other structure to track the state.
+//         // For example, let's assume `current_animation` is a field that keeps track of the active animation.
+
+//         self.current_animation = PlayerAnimationState::Walking; // or however you represent it
+
+//         // Optionally, reset frame to start the walking animation from the beginning
+//         self.current_frame = 0;
+//     }
+// }
 
 use bevy_kira_audio::*;
 
@@ -213,7 +226,7 @@ impl FromWorld for OtherPlayerAssets {
 const AUDIO_SCALE: f32 = 1. / 100.0;
 
 #[derive(Component, Default)]
-struct Emitter {
+pub struct Emitter {
     stopped: bool,
 }
 
@@ -285,7 +298,7 @@ pub fn other_player_joined_ws_msg_handler(
             let layout =
                 TextureAtlasLayout::from_grid(UVec2::splat(32), 6, 2, Some(UVec2::splat(1)), None);
             let texture_atlas_layout = texture_atlas_layouts.add(layout);
-            let player_animation = PlayerAnimation::new();
+            let player_animation = OtherPlayerAnimation::new();
 
             let parent_entity = (
                 Name::new(other_player_joined_response_data.player_uuid),
@@ -341,7 +354,7 @@ pub fn other_player_joined_ws_msg_handler(
 // spawn player
 pub fn other_player_moved_ws_msg_handler(
     mut event_reader: EventReader<OtherPlayerMovedWsReceived>,
-    mut other_players: Query<(&OtherPlayer, &mut Sprite, &Name, &mut Transform)>, // friendly_name: String,
+    mut other_players: Query<(&OtherPlayer, &mut Sprite, &Name, &mut Transform, &mut OtherPlayerAnimation)>, // friendly_name: String,
                                                                                   // color: Color,
                                                                                   // max_speed: f32,
 ) {
@@ -367,7 +380,7 @@ pub fn other_player_moved_ws_msg_handler(
             e
         );
 
-        for (_other_player, mut sprite, name, mut transform) in other_players.iter_mut() {
+        for (_other_player, mut sprite, name, mut transform, mut animation) in other_players.iter_mut() {
             info!("checking vs id map: {}", name.to_string());
             if name.to_string() == other_player_moved_response_data.player_uuid {
                 println!(
@@ -382,6 +395,10 @@ pub fn other_player_moved_ws_msg_handler(
                     - other_player_moved_response_data.old_x_position;
 
                 sprite.flip_x = dx < 0.;
+
+                // animation.play_walking();
+
+                animation.update_state(OtherPlayerAnimationState::Walking);
             }
         }
     }
