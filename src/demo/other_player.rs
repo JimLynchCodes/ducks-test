@@ -1,8 +1,12 @@
 // "Other" player refers to all players that are not the one being controlled by the user
 
 use bevy::{
+    audio::{AudioPlugin, SpatialScale},
+    color::palettes::css::*,
+    prelude::*,
     prelude::*,
     render::texture::{ImageLoaderSettings, ImageSampler},
+    sprite::MaterialMesh2dBundle,
 };
 use serde::Deserialize;
 
@@ -65,8 +69,8 @@ pub struct QuackResponseData {
 struct Listener;
 
 // Tag for sound emitters
-#[derive(Component)]
-struct SoundEmitter;
+// #[derive(Component)]
+// struct SoundEmitter;
 
 #[derive(Debug, Deserialize)]
 pub struct OtherMovedReceivedWsMsg {
@@ -114,49 +118,49 @@ impl FromWorld for OtherPlayerAssets {
     }
 }
 
-#[derive(Resource)]
-pub struct SpatialAudio {
-    /// The volume will change from `1` at distance `0` to `0` at distance `max_distance`
-    pub max_distance: f32,
-}
+// #[derive(Resource)]
+// pub struct SpatialAudio {
+//     /// The volume will change from `1` at distance `0` to `0` at distance `max_distance`
+//     pub max_distance: f32,
+// }
 
-impl SpatialAudio {
-    pub(crate) fn update(
-        &self,
-        receiver_transform: &GlobalTransform,
-        emitters: &Query<(&GlobalTransform, &AudioEmitter)>,
-        audio_instances: &mut Assets<AudioInstance>,
-    ) {
-        for (emitter_transform, emitter) in emitters {
-            let sound_path = emitter_transform.translation() - receiver_transform.translation();
-            let volume = (1. - sound_path.length() / self.max_distance)
-                .clamp(0., 1.)
-                .powi(2);
+// impl SpatialAudio {
+//     pub(crate) fn update(
+//         &self,
+//         receiver_transform: &GlobalTransform,
+//         emitters: &Query<(&GlobalTransform, &AudioEmitter)>,
+//         audio_instances: &mut Assets<AudioInstance>,
+//     ) {
+//         for (emitter_transform, emitter) in emitters {
+//             let sound_path = emitter_transform.translation() - receiver_transform.translation();
+//             let volume = (1. - sound_path.length() / self.max_distance)
+//                 .clamp(0., 1.)
+//                 .powi(2);
 
-            let right_ear_angle = receiver_transform.right().angle_between(sound_path);
-            let panning = (right_ear_angle.cos() + 1.) / 2.;
+//             let right_ear_angle = receiver_transform.right().angle_between(sound_path);
+//             let panning = (right_ear_angle.cos() + 1.) / 2.;
 
-            for instance in emitter.instances.iter() {
-                if let Some(instance) = audio_instances.get_mut(instance) {
-                    instance.set_volume(volume as f64, AudioTween::default());
-                    instance.set_panning(panning as f64, AudioTween::default());
-                }
-            }
-        }
-    }
-}
+//             for instance in emitter.instances.iter() {
+//                 if let Some(instance) = audio_instances.get_mut(instance) {
+//                     instance.set_volume(volume as f64, AudioTween::default());
+//                     instance.set_panning(panning as f64, AudioTween::default());
+//                 }
+//             }
+//         }
+//     }
+// }
 
 // TODO - Still need to figure out proper spatial audio...
-pub(crate) fn run_spatial_audio(
-    spatial_audio: Res<SpatialAudio>,
-    receiver: Query<&GlobalTransform, With<AudioReceiver>>,
-    emitters: Query<(&GlobalTransform, &AudioEmitter)>,
-    mut audio_instances: ResMut<Assets<AudioInstance>>,
-) {
-    if let Ok(receiver_transform) = receiver.get_single() {
-        spatial_audio.update(receiver_transform, &emitters, &mut audio_instances);
-    }
-}
+// pub(crate) fn run_spatial_audio(
+//     spatial_audio: Res<SpatialAudio>,
+//     receiver: Query<&GlobalTransform, With<AudioReceiver>>,
+//     emitters: Query<(&GlobalTransform, &AudioEmitter)>,
+//     mut audio_instances: ResMut<Assets<AudioInstance>>,
+// ) {
+//     if let Ok(receiver_transform) = receiver.get_single() {
+//         spatial_audio.update(receiver_transform, &emitters, &mut audio_instances);
+//     }
+// }
 
 // pub(crate) fn cleanup_stopped_spatial_instances(
 //     mut emitters: Query<&mut AudioEmitter>,
@@ -179,34 +183,49 @@ pub(crate) fn run_spatial_audio(
 ///
 /// Add [`Handle<AudioInstance>`]s to control their pan and volume based on emitter
 /// and receiver positions.
-#[derive(Component, Default)]
-pub struct AudioEmitter {
-    /// Audio instances that are played by this emitter
+// #[derive(Component, Default)]
+// pub struct AudioEmitter {
+//     /// Audio instances that are played by this emitter
 
-    /// The same instance should only be on one emitter.
-    pub instances: Vec<Handle<AudioInstance>>,
-}
+//     /// The same instance should only be on one emitter.
+//     pub instances: Vec<Handle<AudioInstance>>,
+// }
 
 /// Component for the audio receiver
 ///
 /// Most likely you will want to add this component to your player or you camera.
 /// The entity needs a [`Transform`] and [`GlobalTransform`]. The view direction of the [`GlobalTransform`]
 /// will
-#[derive(Component)]
-pub struct AudioReceiver;
+// #[derive(Component)]
+// pub struct AudioReceiver;
 
-#[derive(Bundle)]
-struct SpatialAudioBundle {
-    audio_source: Handle<bevy_kira_audio::AudioSource>,
-    transform: Transform,
-    global_transform: GlobalTransform,
+// #[derive(Bundle)]
+// struct SpatialAudioBundle {
+//     audio_source: Handle<bevy_kira_audio::AudioSource>,
+//     transform: Transform,
+//     global_transform: GlobalTransform,
+// }
+
+/// Spatial audio uses the distance to attenuate the sound volume. In 2D with the default camera,
+/// 1 pixel is 1 unit of distance, so we use a scale so that 100 pixels is 1 unit of distance for
+/// audio.
+
+const AUDIO_SCALE: f32 = 1. / 100.0;
+
+#[derive(Component, Default)]
+struct Emitter {
+    stopped: bool,
 }
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<OtherPlayer>();
     app.load_resource::<OtherPlayerAssets>();
     app.add_plugins(bevy_kira_audio::AudioPlugin);
-    app.insert_resource(SpatialAudio { max_distance: 25. });
+    // app.add_plugins(DefaultPlugins.set(AudioPlugin {
+    //     default_spatial_scale: SpatialScale::new_2d(AUDIO_SCALE),
+    //     ..default()
+    // }));
+    // app.insert_resource(SpatialAudio { max_distance: 25. });
     // app.init_asset::<AudioSource>();
     // app.insert_resource(SpatialScale { scale: 1.0 }); // Scale of spatial audio
 
@@ -215,10 +234,10 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, other_player_quacked_handler);
     app.add_systems(Update, other_player_disconnected_handler);
 
-    app.add_systems(
-        Update,
-        run_spatial_audio.run_if(resource_exists::<SpatialAudio>),
-    );
+    // app.add_systems(
+    //     Update,
+    //     run_spatial_audio.run_if(resource_exists::<SpatialAudio>),
+    // );
 }
 
 // app.add_plugins(DefaultPlugins.set(AudioPlugin {
@@ -410,6 +429,8 @@ fn other_player_quacked_handler(
     mut event_reader: EventReader<OtherPlayerQuackedWsReceived>,
     asset_server: Res<AssetServer>,
     audio: Res<Audio>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     for e in event_reader.read() {
         let other_player_quacked_response_data = serde_json::from_value(e.data.clone())
@@ -449,16 +470,32 @@ fn other_player_quacked_handler(
         //     ..Default::default()                // Use default values for other fields
         // });
 
-        commands
-            .spawn(TransformBundle::from_transform(Transform::from_xyz(
-                other_player_quacked_response_data.player_x_position,
-                other_player_quacked_response_data.player_y_position,
-                0.0,
-            ))) // Position emitter to the right
-            .insert(SoundEmitter);
+        //  Non spatial
+        // commands
+        //     .spawn(TransformBundle::from_transform(Transform::from_xyz(
+        //         other_player_quacked_response_data.player_x_position,
+        //         other_player_quacked_response_data.player_y_position,
+        //         0.0,
+        //     ))) // Position emitter to the right
+        //     .insert(SoundEmitter);
 
-        let audio_handle = asset_server.load("audio/sound_effects/duck-quack.ogg");
-        audio.play(audio_handle);
+        // let audio_handle = asset_server.load("audio/sound_effects/duck-quack.ogg");
+        // audio.play(audio_handle);
+
+        commands.spawn((
+            MaterialMesh2dBundle {
+                mesh: meshes.add(Circle::new(15.0)).into(),
+                material: materials.add(Color::from(BLUE)),
+                transform: Transform::from_translation(Vec3::new(other_player_quacked_response_data.player_x_position,
+                    other_player_quacked_response_data.player_y_position, 100.0)),
+                ..default()
+            },
+            Emitter::default(),
+            AudioBundle {
+                source: asset_server.load("audio/sound_effects/duck-quack.ogg"),
+                settings: PlaybackSettings::ONCE.with_spatial(true),
+            },
+        ));
 
         // commands.spawn(SpatialAudioBundle {
         //     audio_source: audio_handle.clone(),

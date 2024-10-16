@@ -11,8 +11,11 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
 
     app.load_resource::<GameplayMusic>();
-    app.add_systems(OnEnter(Screen::Gameplay), play_gameplay_music);
-    app.add_systems(OnExit(Screen::Gameplay), stop_music);
+
+    // TODO - add ack world music
+
+    // app.add_systems(OnEnter(Screen::Gameplay), play_gameplay_music);
+    // app.add_systems(OnExit(Screen::Gameplay), stop_music);
 
     app.add_systems(
         Update,

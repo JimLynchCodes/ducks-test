@@ -1,3 +1,4 @@
+use bevy::color::palettes::css::{LIME, RED};
 use bevy::prelude::*;
 use bevy::render::texture::{ImageLoaderSettings, ImageSampler};
 use virtual_joystick::{
@@ -31,6 +32,15 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(Update, spacebar_quack_system);
     app.add_systems(Update, you_joined_ws_msg_handler);
     app.add_systems(Update, quack_btn_handler);
+    app.add_systems(Startup, spacial_listener_setup);
+}
+
+fn spacial_listener_setup(
+    mut commands: Commands,
+    // interaction_query: Query<(Entity, &Interaction), Changed<Interaction>>,
+    // audio: Res<QuackAudio>,
+    // audio_assets: Res<Assets<AudioSource>>,
+) {
 }
 
 fn quack_btn_handler(
@@ -171,12 +181,11 @@ pub fn you_joined_ws_msg_handler(
 
             // play sound effect
 
-
             bevy_move_crackers_event_writer.send(MoveCrackersBevyEvent {
                 x_position: you_joined_response_data.cracker_x,
-                y_position: you_joined_response_data.cracker_y, 
+                y_position: you_joined_response_data.cracker_y,
                 points: you_joined_response_data.cracker_points,
-                you_got_crackers: false
+                you_got_crackers: false,
             });
 
             info!("In player.rs handling the You joined event {:?}!", e);
@@ -230,12 +239,45 @@ pub fn you_joined_ws_msg_handler(
                             },
                         ),
                         transform: Transform {
-                            translation: Vec3::new(0.0, 17.0, 1.0), // Position the text above the sprite
+                            translation: Vec3::new(0.0, 17.0, 10.0), // Position the text above the sprite
                             scale: Vec3::splat(0.25),
                             ..Default::default()
                         },
                         ..Default::default()
                     });
+                })
+                .with_children(|parent| {
+
+                    let gap = 10.0;
+
+                    println!("Adding spatial listener!");
+                    
+                    let listener = SpatialListener::new(gap);
+                    parent
+                        .spawn((SpatialBundle::default(), listener.clone()))
+                        .with_children(|parent| {
+                            // left ear
+                            parent.spawn(SpriteBundle {
+                                sprite: Sprite {
+                                    color: RED.into(),
+                                    custom_size: Some(Vec2::splat(20.0)),
+                                    ..default()
+                                },
+                                transform: Transform::from_xyz(-gap, 0.0, 100.0),
+                                ..default()
+                            });
+
+                            // right ear
+                            parent.spawn(SpriteBundle {
+                                sprite: Sprite {
+                                    color: LIME.into(),
+                                    custom_size: Some(Vec2::splat(20.0)),
+                                    ..default()
+                                },
+                                transform: Transform::from_xyz(gap, 0.0, 100.0),
+                                ..default()
+                            });
+                        });
                 });
         }
     }
