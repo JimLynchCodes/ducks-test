@@ -145,7 +145,7 @@ pub struct UserDisconnectedBevyEvent {
 
 #[derive(Event, Debug, Clone)]
 pub struct OtherPlayerJoinedWsReceived {
-    pub data: Value,
+    pub data: OtherPlayerData,
 }
 
 #[derive(Event, Debug, Clone)]
@@ -173,7 +173,9 @@ fn actually_connect(
 
 use thiserror::Error;
 
-use super::cracker::YouGotCrackerSoundFx;
+use crate::demo::other_player::DuckDirection;
+
+use super::{cracker::YouGotCrackerSoundFx, other_player::OtherPlayerData};
 
 #[derive(Error, Debug)]
 enum ConnectionSetupError {
@@ -267,8 +269,23 @@ fn receive_ws_msg(
                         // bevy_event_writer_move_crackers.send(YouJoinedWsReceived{ data: generic_msg.data });
                     }
                     S2CActionTypes::OtherPlayerJoined => {
+                        
+                        let other_player_joined_response_data = serde_json::from_value(generic_msg.data.clone())
+                        .unwrap_or_else(|op| {
+                            info!("Failed to parse incoming websocket message: {}", op);
+                            OtherPlayerData {
+                                player_uuid: "error".to_string(),
+                                player_friendly_name: "error".to_string(),
+                                color: "error".to_string(),
+                                x_position: 0.,
+                                y_position: 0.,
+                                direction_facing: DuckDirection::Right,
+                            }
+                        });
+
                         bevy_event_writer_other_player_joined.send(OtherPlayerJoinedWsReceived {
-                            data: generic_msg.data,
+                            // data: generic_msg.data,
+                            data: other_player_joined_response_data,
                         });
                         info!("Received 'OtherPlayerJoined' message from ws server!");
                     }

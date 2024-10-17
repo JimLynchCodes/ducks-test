@@ -6,14 +6,14 @@ use virtual_joystick::{
     VirtualJoystickPlugin,
 };
 
-use crate::demo::other_player::{unpack_duck_color, NewJoinerData, NewJoinerDataWithAllPlayers};
+use crate::demo::other_player::{unpack_duck_color, NewJoinerDataWithAllPlayers};
 use crate::{
     asset_tracking::LoadResource,
     demo::{movement::MovementController, player_animation::PlayerAnimation},
     screens::Screen,
 };
 
-use super::websocket_connect::{MoveCrackersBevyEvent, YouJoinedWsReceived};
+use super::websocket_connect::{MoveCrackersBevyEvent, OtherPlayerJoinedWsReceived, YouJoinedWsReceived};
 
 #[derive(Resource)]
 pub struct QuackAudio {
@@ -156,6 +156,7 @@ pub fn you_joined_ws_msg_handler(
     player_assets_op: Option<Res<PlayerAssets>>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
     asset_server: Res<AssetServer>,
+    mut bevy_event_writer_other_player_joined: EventWriter<OtherPlayerJoinedWsReceived>,
 ) {
     if let Some(player_assets) = player_assets_op {
         for e in event_reader.read() {
@@ -280,6 +281,18 @@ pub fn you_joined_ws_msg_handler(
                             });
                         });
                 });
+
+
+                // Send bevy event to show other players
+                for other_player_data in you_joined_response_data.all_other_players.iter() {
+
+                    bevy_event_writer_other_player_joined.send(OtherPlayerJoinedWsReceived {
+                        data: other_player_data.clone()
+                    });
+                }
+
+
+
         }
     }
 }

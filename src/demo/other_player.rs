@@ -10,13 +10,18 @@ use bevy::{
 };
 use serde::Deserialize;
 
-use super::{player_animation::PlayerAnimationState, websocket_connect::{
-    OtherPlayerJoinedWsReceived, OtherPlayerMovedWsReceived, OtherPlayerQuackedWsReceived,
-    S2CActionTypes, UserDisconnectedBevyEvent,
-}};
+use super::{
+    player_animation::PlayerAnimationState,
+    websocket_connect::{
+        OtherPlayerJoinedWsReceived, OtherPlayerMovedWsReceived, OtherPlayerQuackedWsReceived,
+        S2CActionTypes, UserDisconnectedBevyEvent,
+    },
+};
 
 use crate::{
-    asset_tracking::LoadResource, demo::other_player_animation::{OtherPlayerAnimation, OtherPlayerAnimationState}, screens::Screen,
+    asset_tracking::LoadResource,
+    demo::other_player_animation::{OtherPlayerAnimation, OtherPlayerAnimationState},
+    screens::Screen,
 };
 
 // impl PlayerAnimation {
@@ -34,16 +39,68 @@ use crate::{
 
 use bevy_kira_audio::*;
 
-#[derive(Debug, Deserialize)]
-pub struct NewJoinerData {
+// #[derive(Debug, Deserialize)]
+// pub struct NewJoinerData {
+//     pub player_uuid: String,
+//     pub player_friendly_name: String,
+//     pub color: String,
+//     pub x_position: f32,
+//     pub y_position: f32,
+//     pub cracker_x: f32,
+//     pub cracker_y: f32,
+//     pub cracker_points: u64,
+
+//     pub direction_facing: DuckDirection,
+
+//     pub player_points: u64,
+// }
+
+// #[derive(Debug, Deserialize)]
+// pub struct NewJoinerDataWithAllPlayers {
+//     pub player_uuid: String,
+//     pub player_friendly_name: String,
+//     pub color: String,
+//     pub x_position: f32,
+//     pub y_position: f32,
+//     pub cracker_x: f32,
+//     pub cracker_y: f32,
+//     pub cracker_points: u64,
+
+//     pub player_points: u64,
+
+//     pub all_other_players: Vec<ClientGameData>,
+// }
+
+// #[derive(Debug, Clone, Deserialize)]
+// pub struct ClientGameData {
+//     pub client_id: String,
+//     pub x_pos: f32,
+//     pub y_pos: f32,
+//     pub radius: u64,
+
+//     pub friendly_name: String,
+//     pub color: String,
+//     pub quack_pitch: f32,
+
+//     pub cracker_count: u64,
+//     pub leaderboard_position: u64
+// }
+
+#[derive(Debug, Deserialize, PartialEq, Clone)]
+pub enum DuckDirection {
+    Left,
+    Right,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct OtherPlayerData {
     pub player_uuid: String,
     pub player_friendly_name: String,
     pub color: String,
     pub x_position: f32,
     pub y_position: f32,
-    pub cracker_x: f32,
-    pub cracker_y: f32,
-    pub cracker_points: u64,
+
+    pub direction_facing: DuckDirection,
 }
 
 #[derive(Debug, Deserialize)]
@@ -59,23 +116,7 @@ pub struct NewJoinerDataWithAllPlayers {
 
     pub player_points: u64,
 
-    pub all_other_players: Vec<ClientGameData>,
-}
-
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct ClientGameData {
-    pub client_id: String,
-    pub x_pos: f32,
-    pub y_pos: f32,
-    pub radius: u64,
-
-    pub friendly_name: String,
-    pub color: String,
-    pub quack_pitch: f32,
-
-    pub cracker_count: u64,
-    pub leaderboard_position: u64
+    pub all_other_players: Vec<OtherPlayerData>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -302,26 +343,16 @@ pub fn other_player_joined_ws_msg_handler(
         for e in event_reader.read() {
             info!("other player joined!");
 
-            #[derive(Debug, Deserialize)]
-            pub struct NewJoinerData {
-                pub player_uuid: String,
-                pub player_friendly_name: String,
-                pub color: String,
-                pub x_position: f32,
-                pub y_position: f32,
-            }
+            // #[derive(Debug, Deserialize)]
+            // pub struct NewJoinerData {
+            //     pub player_uuid: String,
+            //     pub player_friendly_name: String,
+            //     pub color: String,
+            //     pub x_position: f32,
+            //     pub y_position: f32,
+            // }
 
-            let other_player_joined_response_data = serde_json::from_value(e.data.clone())
-                .unwrap_or_else(|op| {
-                    info!("Failed to parse incoming websocket message: {}", op);
-                    NewJoinerData {
-                        player_uuid: "error".to_string(),
-                        player_friendly_name: "error".to_string(),
-                        color: "error".to_string(),
-                        x_position: 0.,
-                        y_position: 0.,
-                    }
-                });
+           
 
             info!(
                 "In other_player.rs handling the Other Player joined event {:?}!",
@@ -333,21 +364,32 @@ pub fn other_player_joined_ws_msg_handler(
             let player_animation = OtherPlayerAnimation::new();
 
             let parent_entity = (
-                Name::new(other_player_joined_response_data.player_uuid),
+                Name::new(e.data.player_uuid.clone()),
                 OtherPlayer,
                 SpriteBundle {
                     texture: player_assets.ducky.clone(),
                     transform: Transform {
-                        scale: Vec2::splat(4.0).extend(2.0),
+                        scale: Vec3::new(
+                            // 4.0 * if e.data.direction_facing
+                            //     == DuckDirection::Left
+                            // {
+                            //     -1.
+                            // } else {
+                            //     1.
+                            // },
+                            4.0,
+                            4.0,
+                            2.0,
+                        ),
                         translation: Vec3::new(
-                            other_player_joined_response_data.x_position,
-                            other_player_joined_response_data.y_position,
+                            e.data.x_position,
+                            e.data.y_position,
                             10.0,
                         ),
                         ..Default::default()
                     },
                     sprite: Sprite {
-                        color: unpack_duck_color(other_player_joined_response_data.color),
+                        color: unpack_duck_color(e.data.color.clone()),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -364,7 +406,7 @@ pub fn other_player_joined_ws_msg_handler(
                 // Player name text that appears above the sprite
                 parent.spawn(Text2dBundle {
                     text: Text::from_section(
-                        other_player_joined_response_data.player_friendly_name, // The text to display
+                        e.data.player_friendly_name.clone(), // The text to display
                         TextStyle {
                             font: asset_server.load("FiraSans-Bold.ttf"), // Load your font here
                             font_size: 25.0,
@@ -373,7 +415,15 @@ pub fn other_player_joined_ws_msg_handler(
                     ),
                     transform: Transform {
                         translation: Vec3::new(0.0, 17.0, 1.0), // Position the text above the sprite
-                        scale: Vec3::new(0.25, 0.25, 1.0),
+                        scale: Vec3::new(
+                        //     0.25 * if e.data.direction_facing // re-flip text so it's always readable
+                        //     == DuckDirection::Left
+                        // {
+                        //     -1.
+                        // } else {
+                        //     1.
+                        // }, 0.25, 1.0),
+                        0.25, 0.25, 1.0),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -386,9 +436,15 @@ pub fn other_player_joined_ws_msg_handler(
 // spawn player
 pub fn other_player_moved_ws_msg_handler(
     mut event_reader: EventReader<OtherPlayerMovedWsReceived>,
-    mut other_players: Query<(&OtherPlayer, &mut Sprite, &Name, &mut Transform, &mut OtherPlayerAnimation)>, // friendly_name: String,
-                                                                                  // color: Color,
-                                                                                  // max_speed: f32,
+    mut other_players: Query<(
+        &OtherPlayer,
+        &mut Sprite,
+        &Name,
+        &mut Transform,
+        &mut OtherPlayerAnimation,
+    )>, // friendly_name: String,
+        // color: Color,
+        // max_speed: f32,
 ) {
     for e in event_reader.read() {
         info!("Handling other player moved bevy event");
@@ -412,7 +468,9 @@ pub fn other_player_moved_ws_msg_handler(
             e
         );
 
-        for (_other_player, mut sprite, name, mut transform, mut animation) in other_players.iter_mut() {
+        for (_other_player, mut sprite, name, mut transform, mut animation) in
+            other_players.iter_mut()
+        {
             info!("checking vs id map: {}", name.to_string());
             if name.to_string() == other_player_moved_response_data.player_uuid {
                 println!(
@@ -535,8 +593,11 @@ fn other_player_quacked_handler(
             MaterialMesh2dBundle {
                 mesh: meshes.add(Circle::new(15.0)).into(),
                 material: materials.add(Color::from(BLUE)),
-                transform: Transform::from_translation(Vec3::new(other_player_quacked_response_data.player_x_position,
-                    other_player_quacked_response_data.player_y_position, 100.0)),
+                transform: Transform::from_translation(Vec3::new(
+                    other_player_quacked_response_data.player_x_position,
+                    other_player_quacked_response_data.player_y_position,
+                    100.0,
+                )),
                 ..default()
             },
             Emitter::default(),
