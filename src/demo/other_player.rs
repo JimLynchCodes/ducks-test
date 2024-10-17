@@ -390,6 +390,7 @@ pub fn other_player_joined_ws_msg_handler(
                     },
                     sprite: Sprite {
                         color: unpack_duck_color(e.data.color.clone()),
+                        flip_x: e.data.direction_facing == DuckDirection::Left,
                         ..Default::default()
                     },
                     ..Default::default()

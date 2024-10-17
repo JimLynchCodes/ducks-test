@@ -13,7 +13,9 @@ use crate::{
     screens::Screen,
 };
 
-use super::websocket_connect::{MoveCrackersBevyEvent, OtherPlayerJoinedWsReceived, YouJoinedWsReceived};
+use super::websocket_connect::{
+    MoveCrackersBevyEvent, OtherPlayerJoinedWsReceived, YouJoinedWsReceived,
+};
 
 #[derive(Resource)]
 pub struct QuackAudio {
@@ -250,7 +252,7 @@ pub fn you_joined_ws_msg_handler(
                     });
                 })
                 .with_children(|parent| {
-                    let gap = 10.0;
+                    let gap = 40.0;
 
                     println!("Adding spatial listener!");
 
@@ -258,41 +260,39 @@ pub fn you_joined_ws_msg_handler(
                     parent
                         .spawn((SpatialBundle::default(), listener.clone()))
                         .with_children(|parent| {
+
+                            // Display for debugging purposes
+
                             // left ear
-                            parent.spawn(SpriteBundle {
-                                sprite: Sprite {
-                                    color: RED.into(),
-                                    custom_size: Some(Vec2::splat(20.0)),
-                                    ..default()
-                                },
-                                transform: Transform::from_xyz(-gap, 0.0, 100.0),
-                                ..default()
-                            });
+                            // parent.spawn(SpriteBundle {
+                            //     sprite: Sprite {
+                            //         color: RED.into(),
+                            //         custom_size: Some(Vec2::splat(20.0)),
+                            //         ..default()
+                            //     },
+                            //     transform: Transform::from_xyz(-gap, 0.0, 100.0),
+                            //     ..default()
+                            // });
 
                             // right ear
-                            parent.spawn(SpriteBundle {
-                                sprite: Sprite {
-                                    color: LIME.into(),
-                                    custom_size: Some(Vec2::splat(20.0)),
-                                    ..default()
-                                },
-                                transform: Transform::from_xyz(gap, 0.0, 100.0),
-                                ..default()
-                            });
+                            // parent.spawn(SpriteBundle {
+                            //     sprite: Sprite {
+                            //         color: LIME.into(),
+                            //         custom_size: Some(Vec2::splat(20.0)),
+                            //         ..default()
+                            //     },
+                            //     transform: Transform::from_xyz(gap, 0.0, 100.0),
+                            //     ..default()
+                            // });
                         });
                 });
 
-
-                // Send bevy event to show other players
-                for other_player_data in you_joined_response_data.all_other_players.iter() {
-
-                    bevy_event_writer_other_player_joined.send(OtherPlayerJoinedWsReceived {
-                        data: other_player_data.clone()
-                    });
-                }
-
-
-
+            // Send bevy event to show other players
+            for other_player_data in you_joined_response_data.all_other_players.iter() {
+                bevy_event_writer_other_player_joined.send(OtherPlayerJoinedWsReceived {
+                    data: other_player_data.clone(),
+                });
+            }
         }
     }
 }
