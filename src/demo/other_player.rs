@@ -47,6 +47,38 @@ pub struct NewJoinerData {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct NewJoinerDataWithAllPlayers {
+    pub player_uuid: String,
+    pub player_friendly_name: String,
+    pub color: String,
+    pub x_position: f32,
+    pub y_position: f32,
+    pub cracker_x: f32,
+    pub cracker_y: f32,
+    pub cracker_points: u64,
+
+    pub player_points: u64,
+
+    pub all_other_players: Vec<ClientGameData>,
+}
+
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ClientGameData {
+    pub client_id: String,
+    pub x_pos: f32,
+    pub y_pos: f32,
+    pub radius: u64,
+
+    pub friendly_name: String,
+    pub color: String,
+    pub quack_pitch: f32,
+
+    pub cracker_count: u64,
+    pub leaderboard_position: u64
+}
+
+#[derive(Debug, Deserialize)]
 pub struct MoveRequestData {
     pub x_direction: f32,
     pub y_direction: f32,

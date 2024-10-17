@@ -6,7 +6,7 @@ use virtual_joystick::{
     VirtualJoystickPlugin,
 };
 
-use crate::demo::other_player::{unpack_duck_color, NewJoinerData};
+use crate::demo::other_player::{unpack_duck_color, NewJoinerData, NewJoinerDataWithAllPlayers};
 use crate::{
     asset_tracking::LoadResource,
     demo::{movement::MovementController, player_animation::PlayerAnimation},
@@ -162,7 +162,7 @@ pub fn you_joined_ws_msg_handler(
             let you_joined_response_data =
                 serde_json::from_value(e.data.clone()).unwrap_or_else(|op| {
                     info!("Failed to parse incoming websocket message: {}", op);
-                    NewJoinerData {
+                    NewJoinerDataWithAllPlayers {
                         player_uuid: "error".to_string(),
                         player_friendly_name: "error".to_string(),
                         color: "error".to_string(),
@@ -176,6 +176,8 @@ pub fn you_joined_ws_msg_handler(
                         cracker_x: 0.,
                         cracker_y: 0.,
                         cracker_points: 0,
+                        player_points: 0,
+                        all_other_players: vec![],
                     }
                 });
 
@@ -247,11 +249,10 @@ pub fn you_joined_ws_msg_handler(
                     });
                 })
                 .with_children(|parent| {
-
                     let gap = 10.0;
 
                     println!("Adding spatial listener!");
-                    
+
                     let listener = SpatialListener::new(gap);
                     parent
                         .spawn((SpatialBundle::default(), listener.clone()))
